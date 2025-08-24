@@ -1,0 +1,206 @@
+#pragma once
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include <stdbool.h>
+
+#include "pico.h"
+#include "pico/time.h"
+
+// FW_VERSION can be overridden at build time via -DFW_VERSION="..."
+#ifndef FW_VERSION
+#define FW_VERSION "v1.7.0-S"
+#endif
+
+#define GIT_REPO_URL_1 "https://github.com/"
+#define GIT_REPO_URL_2 "osemenyuk-114/"
+#define GIT_REPO_URL_3 "zx-rgbi-to-vga-hdmi-PICOSDK/"
+#define GIT_REPO_URL_4 "tree/hi-res"
+
+#define BOARD_CODE_36LJU22
+// #define BOARD_CODE_09LJV23
+
+typedef enum video_out_type_t
+{
+  OUTPUT_TYPE_MIN,
+  DVI = OUTPUT_TYPE_MIN,
+  VGA,
+  OUTPUT_TYPE_MAX = VGA,
+} video_out_type_t;
+
+typedef enum video_out_mode_t
+{
+  VIDEO_MODE_MIN,
+  MODE_640x480_60Hz = VIDEO_MODE_MIN,
+  MODE_720x576_50Hz,
+  VIDEO_MODE_DVI_MAX = MODE_720x576_50Hz,
+  MODE_800x600_60Hz,
+  MODE_1024x768_60Hz_d3,
+  MODE_1024x768_60Hz_d4,
+  MODE_1280x1024_60Hz_d3,
+  MODE_1280x1024_60Hz_d4,
+  VIDEO_MODE_MAX = MODE_1280x1024_60Hz_d4,
+} video_out_mode_t;
+
+typedef enum cap_sync_mode_t
+{
+  SYNC_MODE_MIN,
+  SELF = SYNC_MODE_MIN,
+  EXT,
+  SYNC_MODE_MAX = EXT,
+} cap_sync_mode_t;
+
+typedef struct settings_t
+{
+  video_out_type_t video_out_type;
+  video_out_mode_t video_out_mode;
+  bool scanlines_mode;
+  bool buffering_mode;
+  bool video_sync_mode;
+  cap_sync_mode_t cap_sync_mode;
+  uint32_t frequency;
+  int8_t ext_clk_divider;
+  int8_t delay;
+  int16_t shX;
+  int16_t shY;
+  uint8_t pin_inversion_mask;
+  uint32_t crc;
+} settings_t;
+
+typedef struct video_mode_t
+{
+  uint32_t sys_freq;
+  float pixel_freq;
+  uint16_t h_visible_area;
+  uint16_t v_visible_area;
+  uint16_t whole_line;
+  uint16_t whole_frame;
+  uint8_t h_front_porch;
+  uint8_t h_sync_pulse;
+  uint8_t h_back_porch;
+  uint8_t v_front_porch;
+  uint8_t v_sync_pulse;
+  uint8_t v_back_porch;
+  uint8_t sync_polarity;
+  uint8_t div;
+} video_mode_t;
+
+extern video_mode_t mode_640x480_60Hz;
+extern video_mode_t mode_720x576_50Hz;
+extern video_mode_t mode_800x600_60Hz;
+extern video_mode_t mode_1024x768_60Hz_d3;
+extern video_mode_t mode_1024x768_60Hz_d4;
+extern video_mode_t mode_1280x1024_60Hz_d3;
+extern video_mode_t mode_1280x1024_60Hz_d4;
+
+extern video_mode_t *video_modes[];
+
+extern uint8_t g_v_buf[];
+
+// board pin configurations
+#ifdef BOARD_CODE_36LJU22
+// first VGA pin
+#define VGA_PIN_D0 8
+// DVI pins
+#define DVI_PIN_D0 VGA_PIN_D0
+#define DVI_PIN_CLK0 (DVI_PIN_D0 + 6)
+#else
+// 09LJV23 and others
+// first VGA pin
+#define VGA_PIN_D0 7
+// DVI pins
+#define DVI_PIN_D0 VGA_PIN_D0
+#define DVI_PIN_CLK0 (DVI_PIN_D0 + 6)
+#endif
+
+// DVI settings
+// #define DVI_PIN_invert_diffpairs
+// #define DVI_PIN_RGB_notBGR
+
+// capture pins
+#define CAP_PIN_D0 0
+#define B_PIN CAP_PIN_D0
+#define G_PIN (CAP_PIN_D0 + 1)
+#define R_PIN (CAP_PIN_D0 + 2)
+#define I_PIN (CAP_PIN_D0 + 3)
+#define HS_PIN (CAP_PIN_D0 + 4)
+#define VS_PIN (CAP_PIN_D0 + 5)
+#define F_PIN (CAP_PIN_D0 + 6)
+
+// PIO and SM for VGA
+#define PIO_VGA pio0
+#define DREQ_PIO_VGA DREQ_PIO0_TX0
+#define SM_VGA 0
+
+// PIO and SM for DVI
+#define PIO_DVI pio0
+#define DREQ_PIO_DVI DREQ_PIO0_TX0
+#define SM_DVI 0
+
+// capture PIO and SM
+#define PIO_CAP pio1
+#define DREQ_PIO_CAP DREQ_PIO1_RX0
+#define SM_CAP 0
+
+// settings MIN values
+#define VIDEO_OUT_TYPE_MIN OUTPUT_TYPE_MIN
+#define VIDEO_OUT_MODE_MIN VIDEO_MODE_MIN
+#define CAP_SYNC_MODE_MIN SYNC_MODE_MIN
+#define FREQUENCY_MIN 6000000
+#define EXT_CLK_DIVIDER_MIN 1
+#define DELAY_MIN 0
+#define shX_MIN 0
+#define shY_MIN 0
+
+// settings MAX values
+#define VIDEO_OUT_TYPE_MAX OUTPUT_TYPE_MAX
+#define VIDEO_OUT_MODE_MAX VIDEO_MODE_MAX
+#define CAP_SYNC_MODE_MAX SYNC_MODE_MAX
+#define FREQUENCY_MAX 16000000
+#define EXT_CLK_DIVIDER_MAX 5
+#define DELAY_MAX 31
+#define shX_MAX 200
+#define shY_MAX 200
+#define PIN_INVERSION_MASK 0x7f
+
+// settings DEFAULT values
+#define VIDEO_OUT_TYPE_DEF VGA
+#define VIDEO_OUT_MODE_DEF MODE_640x480_60Hz
+#define CAP_SYNC_MODE_DEF SELF
+#define FREQUENCY_DEF 7000000
+#define EXT_CLK_DIVIDER_DEF 2
+#define DELAY_DEF 15
+#define shX_DEF 68
+#define shY_DEF 34
+#define PIN_INVERSION_MASK_DEF 0x00
+
+// video timing
+// 64 us - duration of a single scanline, 12 us - combined duration of the front porch, horizontal sync pulse, and back porch
+#define ACTIVE_VIDEO_TIME (64 - 12)
+
+// video buffer
+// width of the video buffer is calculated as max captured line length in pixels
+#define V_BUF_W (ACTIVE_VIDEO_TIME * (FREQUENCY_MAX / 1000000))
+#define V_BUF_H 304
+#define V_BUF_SZ (V_BUF_H * V_BUF_W / 2)
+
+#define HIRES_ENABLE
+
+#ifdef HIRES_ENABLE
+#define V_BUF_NUM 1
+#define H_RES 2
+#else
+#define V_BUF_NUM 3
+#define H_RES 1
+#endif
+
+// enable scanlines on 640x480 and 800x600 resolutions
+// not enabled due to reduced image brightness and uneven line thickness caused by monitor scaler
+// #define SCANLINES_ENABLE_LOW_RES
+
+// select scanline thickness for the 1024x768 and 1280x1024 DIV4 video modes
+// thin - show scanline once every four lines
+// thick - show scanline twice in four lines
+#define SCANLINES_USE_THIN
