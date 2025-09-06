@@ -219,22 +219,22 @@ void start_vga(video_mode_t v_mode)
 
   // palette initialization
   for (int i = 0; i < 16; i++)
-    {
+  {
     uint8_t Yi = (i >> 3) & 1;
     uint8_t Ri = ((i >> 2) & 1) ? (Yi ? 0b00000011 : 0b00000010) : 0;
     uint8_t Gi = ((i >> 1) & 1) ? (Yi ? 0b00001100 : 0b00001000) : 0;
     uint8_t Bi = ((i >> 0) & 1) ? (Yi ? 0b00110000 : 0b00100000) : 0;
 
     for (int j = 0; j < 16; j++)
-        {
+    {
       uint8_t Yj = (j >> 3) & 1;
       uint8_t Rj = ((j >> 2) & 1) ? (Yj ? 0b00000011 : 0b00000010) : 0;
       uint8_t Gj = ((j >> 1) & 1) ? (Yj ? 0b00001100 : 0b00001000) : 0;
       uint8_t Bj = ((j >> 0) & 1) ? (Yj ? 0b00110000 : 0b00100000) : 0;
 
       palette[(i * 16) + j] = ((uint16_t)(Ri | Gi | Bi | (NO_SYNC ^ video_mode.sync_polarity)) << 8) | (Rj | Gj | Bj | (NO_SYNC ^ video_mode.sync_polarity));
-        }
     }
+  }
 
   // allocate memory for line template definitions
   base_ptr = calloc(whole_line * 4, sizeof(uint8_t));

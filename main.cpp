@@ -4,7 +4,6 @@
 #include "hardware/flash.h"
 #include "hardware/watchdog.h"
 
-// PICO SDK
 #include "sys/reent.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
@@ -25,7 +24,6 @@ extern "C"
 #include "vga.h"
 }
 
-// PICO SDK
 SerialIo Serial;
 
 settings_t settings;

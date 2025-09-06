@@ -7,7 +7,6 @@
 
 #include "Serial.h"
 
-
 // Public Methods //////////////////////////////////////////////////////////////
 
 void SerialIo::begin(unsigned long baud)
@@ -20,9 +19,12 @@ bool SerialIo::available()
 {
     if (lookahead != -1)
         return true;
+
     int ch = getchar_timeout_us(0);
+
     if (ch == PICO_ERROR_TIMEOUT)
         return false;
+
     lookahead = ch;
     return true;
 }
@@ -35,18 +37,20 @@ int SerialIo::read()
         lookahead = -1;
         return ch;
     }
+
     int ch = getchar_timeout_us(0);
+
     if (ch == PICO_ERROR_TIMEOUT)
         return -1;
+
     return ch;
 }
 
 size_t SerialIo::write(const uint8_t *buffer, size_t size)
 {
     for (size_t i = 0; i < size; ++i)
-    {
         putchar(buffer[i]);
-    }
+
     return size; // Return number of bytes written
 }
 
@@ -98,9 +102,7 @@ size_t SerialIo::print(unsigned int n, int base)
 size_t SerialIo::print(long n, int base)
 {
     if (base == 0)
-    {
         return write(n);
-    }
     else if (base == 10)
     {
         if (n < 0)
@@ -109,12 +111,11 @@ size_t SerialIo::print(long n, int base)
             n = -n;
             return printNumber(n, 10) + t;
         }
+
         return printNumber(n, 10);
     }
     else
-    {
         return printNumber(n, base);
-    }
 }
 
 size_t SerialIo::print(unsigned long n, int base)
@@ -128,9 +129,7 @@ size_t SerialIo::print(unsigned long n, int base)
 size_t SerialIo::print(long long n, int base)
 {
     if (base == 0)
-    {
         return write(n);
-    }
     else if (base == 10)
     {
         if (n < 0)
@@ -139,12 +138,11 @@ size_t SerialIo::print(long long n, int base)
             n = -n;
             return printULLNumber(n, 10) + t;
         }
+
         return printULLNumber(n, 10);
     }
     else
-    {
         return printULLNumber(n, base);
-    }
 }
 
 size_t SerialIo::print(unsigned long long n, int base)
@@ -162,84 +160,84 @@ size_t SerialIo::print(double n, int digits)
 
 size_t SerialIo::println(void)
 {
-  return write("\r\n");
+    return write("\r\n");
 }
 
 size_t SerialIo::println(const String &s)
 {
-  size_t n = print(s);
-  n += println();
-  return n;
+    size_t n = print(s);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(const char c[])
 {
-  size_t n = print(c);
-  n += println();
-  return n;
+    size_t n = print(c);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(char c)
 {
-  size_t n = print(c);
-  n += println();
-  return n;
+    size_t n = print(c);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(unsigned char b, int base)
 {
-  size_t n = print(b, base);
-  n += println();
-  return n;
+    size_t n = print(b, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(int num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(unsigned int num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(long num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(unsigned long num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(long long num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(unsigned long long num, int base)
 {
-  size_t n = print(num, base);
-  n += println();
-  return n;
+    size_t n = print(num, base);
+    n += println();
+    return n;
 }
 
 size_t SerialIo::println(double num, int digits)
 {
-  size_t n = print(num, digits);
-  n += println();
-  return n;
+    size_t n = print(num, digits);
+    n += println();
+    return n;
 }
 
 // Private Methods /////////////////////////////////////////////////////////////
@@ -333,10 +331,13 @@ size_t SerialIo::printFloat(double number, int digits)
 
     if (std::isnan(number))
         return print("nan");
+
     if (std::isinf(number))
         return print("inf");
+
     if (number > 4294967040.0)
         return print("ovf"); // constant determined empirically
+
     if (number < -4294967040.0)
         return print("ovf"); // constant determined empirically
 
@@ -361,9 +362,7 @@ size_t SerialIo::printFloat(double number, int digits)
 
     // Print the decimal point, but only if there are digits beyond
     if (digits > 0)
-    {
         n += print(".");
-    }
 
     // Extract digits from the remainder one at a time
     while (digits-- > 0)

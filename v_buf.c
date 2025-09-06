@@ -80,7 +80,7 @@ void draw_welcome_screen(video_mode_t video_mode)
         *v_buf++ |= c << 4;
       else
         *v_buf = c & 0x0f;
-  }
+    }
 }
 
 void draw_welcome_screen_h(video_mode_t video_mode)
