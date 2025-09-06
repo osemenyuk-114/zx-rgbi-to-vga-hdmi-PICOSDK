@@ -1207,16 +1207,8 @@ void main1()
       loop1();
 }
 
-static struct _reent *_impure_ptr1 = nullptr;
-
 int main()
 {
-  if (setup1 || loop1)
-  {
-    _impure_ptr1 = (struct _reent *)calloc(1, sizeof(struct _reent));
-    _REENT_INIT_PTR(_impure_ptr1);
-  }
-
   multicore_launch_core1(main1);
 
   setup();
