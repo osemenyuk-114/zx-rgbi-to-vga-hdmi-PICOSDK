@@ -1,10 +1,8 @@
-
 #include "pico.h"
 #include "pico/time.h"
 #include "hardware/flash.h"
 #include "hardware/watchdog.h"
 
-#include "sys/reent.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
