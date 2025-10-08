@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
-set(FW_VERSION "v1.4.1-PICO-SDK")
+set(FW_VERSION "v1.4.2-PICO-SDK")
 set(PICO_BOARD pico CACHE STRING "Board type")
 
 # Initialise pico_sdk from installed location

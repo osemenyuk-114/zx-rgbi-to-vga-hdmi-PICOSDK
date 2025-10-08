@@ -7,9 +7,11 @@
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
+
 #include <stdio.h>
 #include <string>
 #include <cstring>
+
 #include "gpio.h"
 #include "Serial.h"
 
@@ -539,6 +541,7 @@ void loop()
         {
           stop_vga();
           start_vga(*(vga_modes[settings.video_out_mode]));
+          // capture PIO clock divider needs to be adjusted for new system clock frequency set in start_vga()
           set_capture_frequency(settings.frequency);
         }
 
@@ -778,7 +781,15 @@ void loop()
         }
 
         if (frequency != settings.frequency)
+        {
           set_capture_frequency(settings.frequency);
+          // restart VGA with new capture frequency value which is used to calculate horizontal margins for some video output modes
+          if (settings.video_out_mode != DVI)
+          {
+            stop_vga();
+            start_vga(*(vga_modes[settings.video_out_mode]));
+          }
+        }
 
         if (inbyte == 'q')
         {
