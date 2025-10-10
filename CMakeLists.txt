@@ -6,10 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
-set(FW_VERSION "v1.4.2-PICO-SDK")
+set(FW_VERSION "v1.4.3-PICO-SDK")
 set(PICO_BOARD pico CACHE STRING "Board type")
 
-# Initialise pico_sdk from installed location
+# Initialize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 
 # == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
@@ -32,7 +32,7 @@ include(pico_sdk_import.cmake)
 
 project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 
-# Initialise the Raspberry Pi Pico SDK
+# Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable
@@ -49,7 +49,7 @@ pico_enable_stdio_usb(${EXECUTABLE_NAME} 1)
 target_include_directories(${EXECUTABLE_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # Add any user requested libraries
-target_link_libraries(${EXECUTABLE_NAME} hardware_pio hardware_dma hardware_flash pico_multicore pico_unique_id pico_stdlib)
+target_link_libraries(${EXECUTABLE_NAME} hardware_pio hardware_dma hardware_flash pico_multicore pico_unique_id pico_stdlib pico_bootsel_via_double_reset pico_usb_reset_interface)
 
 target_compile_options(${EXECUTABLE_NAME} PRIVATE -O3 -DFW_VERSION=\"${FW_VERSION}\")
 
