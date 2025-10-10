@@ -10,7 +10,7 @@
 #include "pico/time.h"
 
 #ifndef FW_VERSION
-#define FW_VERSION "v1.4.2-PICO-SDK"
+#define FW_VERSION "v1.4.3-PICO-SDK"
 #endif
 
 enum cap_sync_mode_t
