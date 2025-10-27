@@ -141,15 +141,15 @@ void __not_in_flash_func(dma_handler_capture())
   uint8_t *cap_buf8 = cap_buf8_s;
 
   static uint8_t *cap_buf = NULL;
-  static uint32_t dma_buf_idx = 0;
+  static uint32_t active_buf_idx = 0;
 
   dma_hw->ints1 = 1u << dma_ch1;
 
-  dma_channel_set_read_addr(dma_ch1, &cap_dma_buf_addr[dma_buf_idx & 1], false);
+  dma_channel_set_read_addr(dma_ch1, &cap_dma_buf_addr[active_buf_idx & 1], false);
 
-  uint8_t *buf8 = (uint8_t *)cap_dma_buf[dma_buf_idx & 1];
+  uint8_t *buf8 = (uint8_t *)cap_dma_buf[active_buf_idx & 1];
 
-  dma_buf_idx++;
+  active_buf_idx++;
 
   for (int k = CAP_DMA_BUF_SIZE; k--;)
   {
@@ -243,9 +243,9 @@ void start_capture()
     pin_inversion_mask >>= 1;
   }
 
-  // buffers initialization
-  cap_dma_buf_addr[0] = &cap_dma_buf[0][0];
-  cap_dma_buf_addr[1] = &cap_dma_buf[1][0];
+  // Initialize buffer address array
+  cap_dma_buf_addr[0] = cap_dma_buf[0];
+  cap_dma_buf_addr[1] = cap_dma_buf[1];
 
   // PIO initialization
   pio_sm_config c = pio_get_default_sm_config();
@@ -278,14 +278,13 @@ void start_capture()
   sm_config_set_in_shift(&c, false, false, 8); // autopush not needed
   sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
-  if (settings.cap_sync_mode == SELF)
-  {
-    uint16_t div_int;
-    uint8_t div_frac;
+  uint16_t div_int = 1;
+  uint8_t div_frac = 0;
 
+  if (settings.cap_sync_mode == SELF)
     pio_calculate_clkdiv_from_float((float)clock_get_hz(clk_sys) / (settings.frequency * 12.0), &div_int, &div_frac);
+
     sm_config_set_clkdiv_int_frac(&c, div_int, div_frac);
-  }
 
   pio_sm_init(PIO_CAP, SM_CAP, offset, &c);
   pio_sm_set_enabled(PIO_CAP, SM_CAP, true);

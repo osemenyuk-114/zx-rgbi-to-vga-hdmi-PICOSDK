@@ -37,3 +37,18 @@ For detailed hardware and original software information, see the upstream projec
 ## Removed Features
 
 - Z80 CLK external clock source. Self-sync capture mode is now preferred.
+
+---
+
+## Recent Improvements
+
+### Performance Improvements
+
+- **Video Output Optimization**: Streamlined DMA handling for both VGA and DVI/HDMI output modes, resulting in more efficient memory usage and cleaner code structure.
+- **Buffer Management**: Simplified buffer switching mechanisms for improved video processing performance.
+
+### Code Quality
+
+- **Memory Optimization**: Reduced unnecessary memory allocations and pointer complexity in video output modules.
+- **Architecture Refinements**: Better separation of concerns between video input capture and output generation systems.
+- **Maintainability**: Cleaner code structure while preserving critical hardware-specific requirements for reliable video processing.

@@ -4,6 +4,7 @@
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
+#include "hardware/vreg.h"
 
 #include <stdio.h>
 #include <string>
@@ -40,6 +41,9 @@ video_out_type_t active_video_output = VIDEO_OUT_TYPE_DEF;
 
 void setup()
 {
+  vreg_set_voltage(VREG_VOLTAGE_1_25);
+  sleep_ms(100);
+
   Serial.begin(9600);
 
   load_settings(&settings);

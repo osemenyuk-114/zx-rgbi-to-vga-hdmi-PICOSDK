@@ -504,7 +504,7 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (video_out_type != settings.video_out_type)
+                if (video_out_type != settings.video_out_type && active_video_output != settings.video_out_type)
                     Serial.println("  Note: Save config and restart for changes to take effect.");
 
                 if (inbyte == 'q')
@@ -587,7 +587,7 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (video_out_mode != settings.video_out_mode)
+                if (video_out_mode != settings.video_out_mode && active_video_output == settings.video_out_type)
                 {
                     stop_video_output();
                     start_video_output(active_video_output);
