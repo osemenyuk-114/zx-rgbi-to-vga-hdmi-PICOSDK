@@ -2,10 +2,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include "pico/stdio.h"
+
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
 #include "hardware/watchdog.h"
-#include "pico/stdio.h"
 
 #include "serial_menu.h"
 
@@ -417,8 +419,8 @@ void print_video_sync_mode()
 void print_pin_inversion_mask()
 {
     char binary_str[9];
-    printf("  Pin inversion mask .......... ");
     binary_to_string(settings.pin_inversion_mask, false, binary_str);
+    printf("  Pin inversion mask .......... ");
     printf("%s\n", binary_str);
 }
 
@@ -453,6 +455,7 @@ void handle_serial_menu()
         sleep_ms(500);
 
         int c = getchar_timeout_us(1000);
+
         if (c != PICO_ERROR_TIMEOUT)
         {
             inchar = 'h';
@@ -814,6 +817,7 @@ void handle_serial_menu()
                         else if (c == '\r' || c == '\n')
                         {
                             printf("\n");
+
                             if (str_len > 0)
                             {
                                 frequency_int = string_to_int(frequency_str);
@@ -1095,9 +1099,9 @@ void handle_serial_menu()
                             // Reset for retry
                             str_len = 0;
                             pin_inversion_mask_str[0] = '\0';
-                            printf("  Allowed inversion mask ...... ");
                             char allowed_mask[9];
                             binary_to_string(PIN_INVERSION_MASK, true, allowed_mask);
+                            printf("  Allowed inversion mask ...... ");
                             printf("%s\n", allowed_mask);
                             printf("  Enter pin inversion mask: ");
                         }

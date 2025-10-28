@@ -43,7 +43,6 @@ void setup()
   vreg_set_voltage(VREG_VOLTAGE_1_25);
   sleep_ms(100);
 
-  // Initialize standard I/O including USB
   stdio_init_all();
 
   load_settings(&settings);
