@@ -1,18 +1,17 @@
-#include "pico.h"
-#include "pico/time.h"
-
-#include "pico/multicore.h"
-#include "pico/stdlib.h"
-#include "hardware/clocks.h"
-#include "hardware/vreg.h"
-
 #include <stdio.h>
 #include <string>
 #include <cstring>
 
-#include "gpio.h"
+#include "pico.h"
+#include "pico/time.h"
+#include "hardware/vreg.h"
+
+#include "pico/multicore.h"
+#include "pico/stdlib.h"
+#include "pico/stdio_usb.h"
+#include "hardware/clocks.h"
+
 #include "serial_menu.h"
-#include "Serial.h"
 
 extern "C"
 {
@@ -23,7 +22,7 @@ extern "C"
 #include "video_output.h"
 }
 
-SerialIo Serial;
+#define PIN_LED (25u)
 
 settings_t settings;
 video_mode_t video_mode;
@@ -44,7 +43,8 @@ void setup()
   vreg_set_voltage(VREG_VOLTAGE_1_25);
   sleep_ms(100);
 
-  Serial.begin(9600);
+  // Initialize standard I/O including USB
+  stdio_init_all();
 
   load_settings(&settings);
   set_buffering_mode(settings.buffering_mode);
@@ -54,7 +54,7 @@ void setup()
 
   start_core0 = true;
 
-  Serial.println("  Starting...\n");
+  printf("  Starting...\n\n");
 }
 
 void loop()
@@ -64,8 +64,9 @@ void loop()
 
 void __attribute__((weak)) setup1()
 {
-  pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_LED, LOW);
+  gpio_init(PIN_LED);
+  gpio_set_dir(PIN_LED, GPIO_OUT);
+  gpio_put(PIN_LED, 0);
 
   while (!start_core0)
     sleep_ms(10);
@@ -81,7 +82,7 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
 
   if (frame_count > 1)
   {
-    digitalWrite(PIN_LED, (frame_count & 0x20) && capture_active);
+    gpio_put(PIN_LED, (frame_count & 0x20) && capture_active);
 
     if (frame_count == frame_count_tmp1)
     {

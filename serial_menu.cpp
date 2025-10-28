@@ -1,6 +1,11 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
 #include "hardware/watchdog.h"
+#include "pico/stdio.h"
 
 #include "serial_menu.h"
 
@@ -14,232 +19,234 @@ extern "C"
 }
 
 // External variables that need to be accessed
-extern SerialIo Serial;
 extern settings_t settings;
 extern video_out_type_t active_video_output;
 extern volatile bool restart_capture;
 
 void print_byte_hex(uint8_t byte)
 {
-    if (byte < 16)
-        Serial.print("0");
-
-    Serial.print(byte, HEX);
+    printf("%02X", byte);
 }
 
-String binary_to_string(uint8_t value, bool mask_1)
+void binary_to_string(uint8_t value, bool mask_1, char *str)
 {
     uint8_t binary = value;
-    String str = "";
 
     for (int i = 0; i < 8; i++)
     {
-        str += binary & 0b10000000 ? (mask_1 ? "X" : "1") : "0";
+        str[i] = binary & 0b10000000 ? (mask_1 ? 'X' : '1') : '0';
         binary <<= 1;
     }
 
-    return str;
+    str[8] = '\0';
 }
 
-uint32_t string_to_int(String value)
+uint32_t string_to_int(const char *value)
 {
     char *end;
-    long val = std::strtol(value.c_str(), &end, 10);
-    return (value.c_str() == end) ? 0 : static_cast<int>(val);
+    long val = strtol(value, &end, 10);
+    return (value == end) ? 0 : (uint32_t)val;
+}
+
+// Input helper function to consolidate repetitive input reading logic
+char get_menu_input(int timeout_ms)
+{
+    int c = getchar_timeout_us(timeout_ms * 1000);
+    return (c == PICO_ERROR_TIMEOUT) ? 0 : (char)c;
 }
 
 void print_main_menu()
 {
-    Serial.print("\n      * ZX RGB(I) to VGA/HDMI ");
-    Serial.print(FW_VERSION);
-    Serial.println(" *\n");
+    printf("\n      * ZX RGB(I) to VGA/HDMI ");
+    printf("%s", FW_VERSION);
+    printf(" *\n\n");
 
-    Serial.println("  o   set video output type (DVI/VGA)");
-    Serial.println("  v   set video resolution");
+    printf("  o   set video output type (DVI/VGA)\n");
+    printf("  v   set video resolution\n");
 
     if (settings.video_out_type == VGA)
-        Serial.println("  s   set scanlines mode");
+        printf("  s   set scanlines mode\n");
 
-    Serial.println("  b   set buffering mode");
-    Serial.println("  c   set capture synchronization source");
-    Serial.println("  f   set capture frequency");
-    Serial.println("  d   set external clock divider");
-    Serial.println("  y   set video sync mode");
-    Serial.println("  t   set capture delay and image position");
-    Serial.println("  m   set pin inversion mask\n");
+    printf("  b   set buffering mode\n");
+    printf("  c   set capture synchronization source\n");
+    printf("  f   set capture frequency\n");
+    printf("  d   set external clock divider\n");
+    printf("  y   set video sync mode\n");
+    printf("  t   set capture delay and image position\n");
+    printf("  m   set pin inversion mask\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit configuration mode");
-    Serial.println("  w   save configuration");
-    Serial.println("  r   restart\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit configuration mode\n");
+    printf("  w   save configuration\n");
+    printf("  r   restart\n\n");
 }
 
 void print_video_out_menu()
 {
-    Serial.println("\n      * Video resolution *\n");
+    printf("\n      * Video resolution *\n\n");
 
-    Serial.println("  1    640x480 @60Hz (div 2)");
+    printf("  1    640x480 @60Hz (div 2)\n");
 
     switch (settings.video_out_type)
     {
     case DVI:
-        Serial.println("  2    720x576 @50Hz (div 2)");
+        printf("  2    720x576 @50Hz (div 2)\n");
         break;
 
     case VGA:
-        Serial.println("  2    800x600 @60Hz (div 2)");
-        Serial.println("  3   1024x768 @60Hz (div 3)");
-        Serial.println("  4  1280x1024 @60Hz (div 3)");
-        Serial.println("  5  1280x1024 @60Hz (div 4)");
+        printf("  2    800x600 @60Hz (div 2)\n");
+        printf("  3   1024x768 @60Hz (div 3)\n");
+        printf("  4  1280x1024 @60Hz (div 3)\n");
+        printf("  5  1280x1024 @60Hz (div 4)\n");
         break;
 
     default:
         break;
     }
 
-    Serial.println();
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_video_out_type_menu()
 {
-    Serial.println("\n      * Video output type *\n");
+    printf("\n      * Video output type *\n\n");
 
-    Serial.println("  1   DVI");
-    Serial.println("  2   VGA\n");
+    printf("  1   DVI\n");
+    printf("  2   VGA\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_scanlines_mode_menu()
 {
-    Serial.println("\n      * Scanlines mode *\n");
+    printf("\n      * Scanlines mode *\n\n");
 
-    Serial.println("  s   change scanlines mode\n");
+    printf("  s   change scanlines mode\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_buffering_mode_menu()
 {
-    Serial.println("\n      * Buffering mode *\n");
+    printf("\n      * Buffering mode *\n\n");
 
-    Serial.println("  b   change buffering mode\n");
+    printf("  b   change buffering mode\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_cap_sync_mode_menu()
 {
-    Serial.println("\n      * Capture synchronization source *\n");
+    printf("\n      * Capture synchronization source *\n\n");
 
-    Serial.println("  1   self-synchronizing");
-    Serial.println("  2   external clock\n");
+    printf("  1   self-synchronizing\n");
+    printf("  2   external clock\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_capture_frequency_menu()
 {
-    Serial.println("\n      * Capture frequency *\n");
+    printf("\n      * Capture frequency *\n\n");
 
-    Serial.println("  1   7000000 Hz (ZX Spectrum  48K)");
-    Serial.println("  2   7093800 Hz (ZX Spectrum 128K)");
-    Serial.println("  3   custom\n");
+    printf("  1   7000000 Hz (ZX Spectrum  48K)\n");
+    printf("  2   7093800 Hz (ZX Spectrum 128K)\n");
+    printf("  3   custom\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_ext_clk_divider_menu()
 {
-    Serial.println("\n      * External clock divider *\n");
+    printf("\n      * External clock divider *\n\n");
 
-    Serial.println("  a   increment divider (+1)");
-    Serial.println("  z   decrement divider (-1)\n");
+    printf("  a   increment divider (+1)\n");
+    printf("  z   decrement divider (-1)\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_video_sync_mode_menu()
 {
-    Serial.println("\n      * Video synchronization mode *\n");
+    printf("\n      * Video synchronization mode *\n\n");
 
-    Serial.println("  y   change synchronization mode\n");
+    printf("  y   change synchronization mode\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_image_tuning_menu()
 {
-    Serial.println("\n      * Capture delay and image position *\n");
+    printf("\n      * Capture delay and image position *\n\n");
 
-    Serial.println("  a   increment delay (+1)");
-    Serial.println("  z   decrement delay (-1)\n");
+    printf("  a   increment delay (+1)\n");
+    printf("  z   decrement delay (-1)\n\n");
 
-    Serial.println("  i   shift image UP");
-    Serial.println("  k   shift image DOWN");
-    Serial.println("  j   shift image LEFT");
-    Serial.println("  l   shift image RIGHT\n");
+    printf("  i   shift image UP\n");
+    printf("  k   shift image DOWN\n");
+    printf("  j   shift image LEFT\n");
+    printf("  l   shift image RIGHT\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_pin_inversion_mask_menu()
 {
-    Serial.println("\n      * Pin inversion mask *\n");
+    printf("\n      * Pin inversion mask *\n\n");
 
-    Serial.println("  m   set pin inversion mask\n");
+    printf("  m   set pin inversion mask\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_test_menu()
 {
-    Serial.println("\n      * Tests *\n");
+    printf("\n      * Tests *\n\n");
 
-    Serial.println("  1   draw welcome image (vertical stripes)");
-    Serial.println("  2   draw welcome image (horizontal stripes)");
-    Serial.println("  3   draw \"NO SIGNAL\" screen");
-    Serial.println("  i   show captured frame count\n");
+    printf("  1   draw welcome image (vertical stripes)\n");
+    printf("  2   draw welcome image (horizontal stripes)\n");
+    printf("  3   draw \"NO SIGNAL\" screen\n");
+    printf("  i   show captured frame count\n\n");
 
-    Serial.println("  p   show configuration");
-    Serial.println("  h   show help (this menu)");
-    Serial.println("  q   exit to main menu\n");
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
 }
 
 void print_video_out_type()
 {
-    Serial.print("  Video output type ........... ");
+    printf("  Video output type ........... ");
 
     switch (settings.video_out_type)
     {
     case DVI:
-        Serial.println("DVI");
+        printf("DVI\n");
         break;
 
     case VGA:
-        Serial.println("VGA");
+        printf("VGA\n");
         break;
 
     default:
@@ -249,32 +256,32 @@ void print_video_out_type()
 
 void print_video_out_mode()
 {
-    Serial.print("  Video resolution ............ ");
+    printf("  Video resolution ............ ");
 
     switch (settings.video_out_mode)
     {
     case MODE_640x480_60Hz:
-        Serial.println("640x480 @60Hz");
+        printf("640x480 @60Hz\n");
         break;
 
     case MODE_720x576_50Hz:
-        Serial.println("720x576 @50Hz");
+        printf("720x576 @50Hz\n");
         break;
 
     case MODE_800x600_60Hz:
-        Serial.println("800x600 @60Hz");
+        printf("800x600 @60Hz\n");
         break;
 
     case MODE_1024x768_60Hz:
-        Serial.println("1024x768 @60Hz");
+        printf("1024x768 @60Hz\n");
         break;
 
     case MODE_1280x1024_60Hz_d3:
-        Serial.println("1280x1024 @60Hz (div 3)");
+        printf("1280x1024 @60Hz (div 3)\n");
         break;
 
     case MODE_1280x1024_60Hz_d4:
-        Serial.println("1280x1024 @60Hz (div 4)");
+        printf("1280x1024 @60Hz (div 4)\n");
         break;
 
     default:
@@ -284,36 +291,36 @@ void print_video_out_mode()
 
 void print_scanlines_mode()
 {
-    Serial.print("  Scanlines ................... ");
+    printf("  Scanlines ................... ");
 
     if (settings.scanlines_mode)
-        Serial.println("enabled");
+        printf("enabled\n");
     else
-        Serial.println("disabled");
+        printf("disabled\n");
 }
 
 void print_buffering_mode()
 {
-    Serial.print("  Buffering mode .............. ");
+    printf("  Buffering mode .............. ");
 
     if (settings.buffering_mode)
-        Serial.println("x3");
+        printf("x3\n");
     else
-        Serial.println("x1");
+        printf("x1\n");
 }
 
 void print_cap_sync_mode()
 {
-    Serial.print("  Capture sync source ......... ");
+    printf("  Capture sync source ......... ");
 
     switch (settings.cap_sync_mode)
     {
     case SELF:
-        Serial.println("self-synchronizing");
+        printf("self-synchronizing\n");
         break;
 
     case EXT:
-        Serial.println("external clock");
+        printf("external clock\n");
         break;
 
     default:
@@ -323,33 +330,33 @@ void print_cap_sync_mode()
 
 void print_capture_frequency()
 {
-    Serial.print("  Capture frequency ........... ");
-    Serial.print(settings.frequency, DEC);
-    Serial.println(" Hz");
+    printf("  Capture frequency ........... ");
+    printf("%d", settings.frequency);
+    printf(" Hz\n");
 }
 
 void print_ext_clk_divider()
 {
-    Serial.print("  External clock divider ...... ");
-    Serial.println(settings.ext_clk_divider, DEC);
+    printf("  External clock divider ...... ");
+    printf("%d\n", settings.ext_clk_divider);
 }
 
 void print_capture_delay()
 {
-    Serial.print("  Capture delay ............... ");
-    Serial.println(settings.delay, DEC);
+    printf("  Capture delay ............... ");
+    printf("%d\n", settings.delay);
 }
 
 void print_x_offset()
 {
-    Serial.print("  X offset .................... ");
-    Serial.println(settings.shX, DEC);
+    printf("  X offset .................... ");
+    printf("%d\n", settings.shX);
 }
 
 void print_y_offset()
 {
-    Serial.print("  Y offset .................... ");
-    Serial.println(settings.shY, DEC);
+    printf("  Y offset .................... ");
+    printf("%d\n", settings.shY);
 }
 
 void print_dividers()
@@ -359,63 +366,65 @@ void print_dividers()
 
     video_mode_t video_mode = *(video_modes[settings.video_out_mode]);
 
-    Serial.print("\n  System clock frequency ...... ");
-    Serial.print(clock_get_hz(clk_sys), 1);
-    Serial.println(" Hz");
+    printf("\n  System clock frequency ...... ");
+    printf("%.1f", (float)clock_get_hz(clk_sys));
+    printf(" Hz\n");
 
     if (settings.cap_sync_mode == SELF)
     {
-        Serial.print("  Capture divider ............. ");
+        printf("  Capture divider ............. ");
 
         pio_calculate_clkdiv_from_float((float)clock_get_hz(clk_sys) / (settings.frequency * 12.0), &div_int, &div_frac);
 
-        Serial.print((div_int + (float)div_frac / 256), 8);
+        printf("%.8f", (div_int + (float)div_frac / 256));
 
-        Serial.print(" ( ");
-        Serial.print("0x");
+        printf(" ( ");
+        printf("0x");
         print_byte_hex((uint8_t)(div_int >> 8));
         print_byte_hex((uint8_t)(div_int & 0xff));
         print_byte_hex(div_frac);
-        Serial.println(" )");
+        printf(" )\n");
     }
 
     if (settings.video_out_type == VGA)
     {
-        Serial.print("  Video output clock divider .. ");
+        printf("  Video output clock divider .. ");
 
         pio_calculate_clkdiv_from_float(((float)clock_get_hz(clk_sys) * video_mode.div) / video_mode.pixel_freq, &div_int, &div_frac);
 
-        Serial.print((div_int + (float)div_frac / 256), 8);
+        printf("%.8f", (div_int + (float)div_frac / 256));
 
-        Serial.print(" ( ");
-        Serial.print("0x");
+        printf(" ( ");
+        printf("0x");
         print_byte_hex((uint8_t)(div_int >> 8));
         print_byte_hex((uint8_t)(div_int & 0xff));
         print_byte_hex(div_frac);
-        Serial.println(" )");
+        printf(" )\n");
     }
 
-    Serial.println();
+    printf("\n");
 }
 
 void print_video_sync_mode()
 {
-    Serial.print("  Video synchronization mode .. ");
+    printf("  Video synchronization mode .. ");
     if (settings.video_sync_mode)
-        Serial.println("separate");
+        printf("separate\n");
     else
-        Serial.println("composite");
+        printf("composite\n");
 }
 
 void print_pin_inversion_mask()
 {
-    Serial.print("  Pin inversion mask .......... ");
-    Serial.println(binary_to_string(settings.pin_inversion_mask, false));
+    char binary_str[9];
+    printf("  Pin inversion mask .......... ");
+    binary_to_string(settings.pin_inversion_mask, false, binary_str);
+    printf("%s\n", binary_str);
 }
 
 void print_settings()
 {
-    Serial.println("");
+    printf("\n");
     print_video_out_type();
     print_video_out_mode();
 
@@ -432,53 +441,51 @@ void print_settings()
     print_y_offset();
     print_pin_inversion_mask();
     print_dividers();
-    Serial.println("");
+    printf("\n");
 }
 
 void handle_serial_menu()
 {
-    char inbyte = 0;
+    char inchar = 0;
 
     while (1)
     {
         sleep_ms(500);
 
-        if (Serial.available())
+        int c = getchar_timeout_us(1000);
+        if (c != PICO_ERROR_TIMEOUT)
         {
-            inbyte = 'h';
+            inchar = 'h';
             break;
         }
     }
 
-    Serial.println(" Entering the configuration mode\n");
+    printf(" Entering the configuration mode\n\n");
 
     while (1)
     {
-        sleep_ms(10);
+        if (inchar != 'h')
+            inchar = get_menu_input(10); // 10ms timeout
 
-        if (inbyte != 'h' && Serial.available())
-            inbyte = Serial.read();
-
-        switch (inbyte)
+        switch (inchar)
         {
         case 'p':
             print_settings();
-            inbyte = 0;
+            inchar = 0;
             break;
 
         case 'o':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
                 uint8_t video_out_type = settings.video_out_type;
 
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_video_out_type();
@@ -505,15 +512,15 @@ void handle_serial_menu()
                 }
 
                 if (video_out_type != settings.video_out_type && active_video_output != settings.video_out_type)
-                    Serial.println("  Note: Save config and restart for changes to take effect.");
+                    printf("  Note: Save config and restart for changes to take effect.\n");
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -521,18 +528,16 @@ void handle_serial_menu()
 
         case 'v':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
-
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
                 uint8_t video_out_mode = settings.video_out_mode;
 
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_video_out_mode();
@@ -595,13 +600,13 @@ void handle_serial_menu()
                     set_capture_frequency(settings.frequency);
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -611,20 +616,18 @@ void handle_serial_menu()
         {
             if (settings.video_out_type != VGA)
             {
-                inbyte = 0;
+                inchar = 0;
                 break;
             }
 
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_scanlines_mode();
@@ -644,13 +647,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -658,16 +661,14 @@ void handle_serial_menu()
 
         case 'b':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_buffering_mode();
@@ -687,13 +688,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -701,18 +702,16 @@ void handle_serial_menu()
 
         case 'c':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
-
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
                 uint8_t cap_sync_mode = settings.cap_sync_mode;
 
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_cap_sync_mode();
@@ -739,13 +738,13 @@ void handle_serial_menu()
                 if (cap_sync_mode != settings.cap_sync_mode)
                     restart_capture = true;
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -753,18 +752,16 @@ void handle_serial_menu()
 
         case 'f':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
-
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
                 uint32_t frequency = settings.frequency;
 
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_capture_frequency();
@@ -786,46 +783,58 @@ void handle_serial_menu()
 
                 case '3':
                 {
-                    String frequency_str = "";
+                    char frequency_str[16] = "";
+                    int str_len = 0;
                     uint32_t frequency_int = 0;
 
-                    Serial.print("  Enter frequency: ");
+                    printf("  Enter frequency: ");
 
                     while (1)
                     {
-                        sleep_ms(10);
-                        inbyte = 0;
+                        int c = getchar_timeout_us(10000);
 
-                        if (Serial.available())
-                            inbyte = Serial.read();
+                        if (c == PICO_ERROR_TIMEOUT)
+                            continue;
 
-                        if (inbyte >= '0' && inbyte <= '9')
+                        if (c >= '0' && c <= '9' && str_len < 15)
                         {
-                            Serial.print(inbyte);
-                            frequency_str += inbyte;
+                            printf("%c", c);
+                            frequency_str[str_len++] = c;
+                            frequency_str[str_len] = '\0';
                         }
-
-                        if (inbyte == '\r')
+                        else if (c == 8 || c == 127) // Backspace
                         {
-                            Serial.println("");
-                            frequency_int = string_to_int(frequency_str);
+                            if (str_len > 0)
+                            {
+                                str_len--;
+                                frequency_str[str_len] = '\0';
+                                printf("\b \b");
+                            }
+                        }
+                        else if (c == '\r' || c == '\n')
+                        {
+                            printf("\n");
+                            if (str_len > 0)
+                            {
+                                frequency_int = string_to_int(frequency_str);
 
-                            if (frequency_int >= FREQUENCY_MIN && frequency_int <= FREQUENCY_MAX)
-                            {
-                                settings.frequency = frequency_int;
-                                print_capture_frequency();
-                                break;
+                                if (frequency_int >= FREQUENCY_MIN && frequency_int <= FREQUENCY_MAX)
+                                {
+                                    settings.frequency = frequency_int;
+                                    print_capture_frequency();
+                                    break;
+                                }
                             }
-                            else
-                            {
-                                frequency_str = "";
-                                Serial.print("  Allowed frequency range ..... ");
-                                Serial.print(FREQUENCY_MIN, DEC);
-                                Serial.print(" - ");
-                                Serial.print(FREQUENCY_MAX, DEC);
-                                Serial.println(" Hz");
-                                Serial.print("  Enter frequency: ");
-                            }
+
+                            // Reset for retry
+                            str_len = 0;
+                            frequency_str[0] = '\0';
+                            printf("  Allowed frequency range ..... ");
+                            printf("%d", FREQUENCY_MIN);
+                            printf(" - ");
+                            printf("%d", FREQUENCY_MAX);
+                            printf(" Hz\n");
+                            printf("  Enter frequency: ");
                         }
                     }
 
@@ -844,13 +853,13 @@ void handle_serial_menu()
                     start_video_output(active_video_output);
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -858,16 +867,14 @@ void handle_serial_menu()
 
         case 'd':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
 
                 case 'p':
@@ -892,13 +899,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -906,16 +913,14 @@ void handle_serial_menu()
 
         case 'y':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_video_sync_mode();
@@ -935,13 +940,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -949,16 +954,14 @@ void handle_serial_menu()
 
         case 't':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
 
                 case 'p':
@@ -1005,13 +1008,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -1019,18 +1022,16 @@ void handle_serial_menu()
 
         case 'm':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
-
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
                 uint8_t pin_inversion_mask = settings.pin_inversion_mask;
 
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_pin_inversion_mask();
@@ -1042,49 +1043,63 @@ void handle_serial_menu()
 
                 case 'm':
                 {
-                    String pin_inversion_mask_str = "";
+                    char pin_inversion_mask_str[9] = "";
+                    int str_len = 0;
 
-                    Serial.print("  Enter pin inversion mask: ");
+                    printf("  Enter pin inversion mask: ");
 
                     while (1)
                     {
-                        sleep_ms(10);
-                        inbyte = 0;
+                        int c = getchar_timeout_us(10000);
 
-                        if (Serial.available())
-                            inbyte = Serial.read();
+                        if (c == PICO_ERROR_TIMEOUT)
+                            continue;
 
-                        if (inbyte >= '0' && inbyte <= '1')
+                        if ((c == '0' || c == '1') && str_len < 8)
                         {
-                            Serial.print(inbyte);
-                            pin_inversion_mask_str += inbyte;
+                            printf("%c", c);
+                            pin_inversion_mask_str[str_len++] = c;
+                            pin_inversion_mask_str[str_len] = '\0';
                         }
-
-                        if (inbyte == '\r')
+                        else if (c == 8 || c == 127) // Backspace
                         {
-                            Serial.println("");
-
-                            uint8_t pin_inversion_mask_int = 0;
-
-                            for (int i = 0; i < pin_inversion_mask_str.length(); i++)
+                            if (str_len > 0)
                             {
-                                pin_inversion_mask_int <<= 1;
-                                pin_inversion_mask_int |= pin_inversion_mask_str[i] == '1' ? 1 : 0;
+                                str_len--;
+                                pin_inversion_mask_str[str_len] = '\0';
+                                printf("\b \b");
+                            }
+                        }
+                        else if (c == '\r' || c == '\n')
+                        {
+                            printf("\n");
+
+                            if (str_len > 0)
+                            {
+                                uint8_t pin_inversion_mask_int = 0;
+
+                                for (int i = 0; i < str_len; i++)
+                                {
+                                    pin_inversion_mask_int <<= 1;
+                                    pin_inversion_mask_int |= pin_inversion_mask_str[i] == '1' ? 1 : 0;
+                                }
+
+                                if (!(pin_inversion_mask_int & ~PIN_INVERSION_MASK))
+                                {
+                                    settings.pin_inversion_mask = pin_inversion_mask_int;
+                                    print_pin_inversion_mask();
+                                    break;
+                                }
                             }
 
-                            if (!(pin_inversion_mask_int & ~PIN_INVERSION_MASK))
-                            {
-                                settings.pin_inversion_mask = pin_inversion_mask_int;
-                                print_pin_inversion_mask();
-                                break;
-                            }
-                            else
-                            {
-                                pin_inversion_mask_str = "";
-                                Serial.print("  Allowed inversion mask ...... ");
-                                Serial.println(binary_to_string(PIN_INVERSION_MASK, true));
-                                Serial.print("  Enter pin inversion mask: ");
-                            }
+                            // Reset for retry
+                            str_len = 0;
+                            pin_inversion_mask_str[0] = '\0';
+                            printf("  Allowed inversion mask ...... ");
+                            char allowed_mask[9];
+                            binary_to_string(PIN_INVERSION_MASK, true, allowed_mask);
+                            printf("%s\n", allowed_mask);
+                            printf("  Enter pin inversion mask: ");
                         }
                     }
 
@@ -1098,13 +1113,13 @@ void handle_serial_menu()
                 if (pin_inversion_mask != settings.pin_inversion_mask)
                     set_pin_inversion_mask(settings.pin_inversion_mask);
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -1112,16 +1127,14 @@ void handle_serial_menu()
 
         case 'T':
         {
-            inbyte = 'h';
+            inchar = 'h';
 
             while (1)
             {
-                sleep_ms(10);
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
 
-                if (inbyte != 'h' && Serial.available())
-                    inbyte = Serial.read();
-
-                switch (inbyte)
+                switch (inchar)
                 {
                 case 'p':
                     print_settings();
@@ -1132,8 +1145,8 @@ void handle_serial_menu()
                     break;
 
                 case 'i':
-                    Serial.print("  Current frame count ......... ");
-                    Serial.println(frame_count, DEC);
+                    printf("  Current frame count ......... ");
+                    printf("%d\n", frame_count);
                     break;
 
                 case '1':
@@ -1146,11 +1159,11 @@ void handle_serial_menu()
 
                     if (frame_count == frame_count_tmp) // draw the screen only if capture is not active
                     {
-                        Serial.println("  Drawing the screen...");
+                        printf("  Drawing the screen...\n");
 
-                        if (inbyte == '1')
+                        if (inchar == '1')
                             draw_welcome_screen(*(video_modes[settings.video_out_mode]));
-                        else if (inbyte == '2')
+                        else if (inchar == '2')
                             draw_welcome_screen_h(*(video_modes[settings.video_out_mode]));
                         else
                             draw_no_signal(*(video_modes[settings.video_out_mode]));
@@ -1163,13 +1176,13 @@ void handle_serial_menu()
                     break;
                 }
 
-                if (inbyte == 'q')
+                if (inchar == 'q')
                 {
-                    inbyte = 'h';
+                    inchar = 'h';
                     break;
                 }
 
-                inbyte = 0;
+                inchar = 0;
             }
 
             break;
@@ -1177,17 +1190,17 @@ void handle_serial_menu()
 
         case 'h':
             print_main_menu();
-            inbyte = 0;
+            inchar = 0;
             break;
 
         case 'w':
-            Serial.println("  Saving settings...");
+            printf("  Saving settings...\n");
             save_settings(&settings);
-            inbyte = 0;
+            inchar = 0;
             break;
 
         case 'r':
-            Serial.println("  Restarting........");
+            printf("  Restarting........\n");
             sleep_ms(100);
             watchdog_reboot(0, 0, 0);
             break;
@@ -1196,12 +1209,10 @@ void handle_serial_menu()
             break;
         }
 
-        if (inbyte == 'q')
+        if (inchar == 'q')
         {
-            inbyte = 0;
-
-            Serial.println(" Leaving the configuration mode\n");
-
+            inchar = 0;
+            printf(" Leaving the configuration mode\n\n");
             break;
         }
     }
