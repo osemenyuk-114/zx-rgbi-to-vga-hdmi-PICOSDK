@@ -369,7 +369,7 @@ void print_dividers()
     video_mode_t video_mode = *(video_modes[settings.video_out_mode]);
 
     printf("\n  System clock frequency ...... ");
-    printf("%.1f", (float)clock_get_hz(clk_sys));
+    printf("%d", clock_get_hz(clk_sys));
     printf(" Hz\n");
 
     if (settings.cap_sync_mode == SELF)
@@ -786,7 +786,7 @@ void handle_serial_menu()
 
                 case '3':
                 {
-                    char frequency_str[16] = "";
+                    char frequency_str[8] = "";
                     int str_len = 0;
                     uint32_t frequency_int = 0;
 
@@ -794,18 +794,15 @@ void handle_serial_menu()
 
                     while (1)
                     {
-                        int c = getchar_timeout_us(10000);
+                        inchar = get_menu_input(10);
 
-                        if (c == PICO_ERROR_TIMEOUT)
-                            continue;
-
-                        if (c >= '0' && c <= '9' && str_len < 15)
+                        if (inchar >= '0' && inchar <= '9' && str_len < 7)
                         {
-                            printf("%c", c);
-                            frequency_str[str_len++] = c;
+                            printf("%c", inchar);
+                            frequency_str[str_len++] = inchar;
                             frequency_str[str_len] = '\0';
                         }
-                        else if (c == 8 || c == 127) // Backspace
+                        else if (inchar == 8 || inchar == 127) // Backspace
                         {
                             if (str_len > 0)
                             {
@@ -814,7 +811,7 @@ void handle_serial_menu()
                                 printf("\b \b");
                             }
                         }
-                        else if (c == '\r' || c == '\n')
+                        else if (inchar == '\r' || inchar == '\n')
                         {
                             printf("\n");
 
@@ -1054,18 +1051,15 @@ void handle_serial_menu()
 
                     while (1)
                     {
-                        int c = getchar_timeout_us(10000);
+                        inchar = get_menu_input(10);
 
-                        if (c == PICO_ERROR_TIMEOUT)
-                            continue;
-
-                        if ((c == '0' || c == '1') && str_len < 8)
+                        if ((inchar == '0' || inchar == '1') && str_len < 8)
                         {
-                            printf("%c", c);
-                            pin_inversion_mask_str[str_len++] = c;
+                            printf("%c", inchar);
+                            pin_inversion_mask_str[str_len++] = inchar;
                             pin_inversion_mask_str[str_len] = '\0';
                         }
-                        else if (c == 8 || c == 127) // Backspace
+                        else if (inchar == 8 || inchar == 127) // Backspace
                         {
                             if (str_len > 0)
                             {
@@ -1074,7 +1068,7 @@ void handle_serial_menu()
                                 printf("\b \b");
                             }
                         }
-                        else if (c == '\r' || c == '\n')
+                        else if (inchar == '\r' || inchar == '\n')
                         {
                             printf("\n");
 
