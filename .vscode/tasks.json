@@ -20,7 +20,7 @@
         {
             "label": "Run Project",
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.1.0/picotool/picotool",
+            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
             "args": [
                 "load",
                 "${command:raspberry-pi-pico.launchTargetPath}",
@@ -32,13 +32,13 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.1.0/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
             }
         },
         {
             "label": "Reset to BOOTSEL",
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.1.0/picotool/picotool",
+            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
             "args": [
                 "reboot",
                 "-f",
@@ -50,7 +50,7 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.1.0/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
             }
         },
         {
@@ -61,7 +61,7 @@
                 "Reset to BOOTSEL"
             ],
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.1.0/picotool/picotool",
+            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
             "args": [
                 "load",
                 "${command:raspberry-pi-pico.launchTargetPath}",
@@ -73,7 +73,7 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.1.0/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
             },
             "group": {
                 "kind": "build",
@@ -97,25 +97,6 @@
             "problemMatcher": [],
             "windows": {
                 "command": "${env:USERPROFILE}/.pico-sdk/openocd/0.12.0+dev/openocd.exe",
-            }
-        },
-        {
-            "label": "Upload with Reset (PowerShell)",
-            "type": "shell",
-            "dependsOn": "Compile Project",
-            "command": "powershell",
-            "args": [
-                "-Command",
-                "Write-Host 'Resetting to BOOTSEL mode...'; & '${env:USERPROFILE}\\.pico-sdk\\picotool\\2.1.0\\picotool\\picotool.exe' reboot -f -u; Start-Sleep -Seconds 3; Write-Host 'Loading firmware...'; & '${env:USERPROFILE}\\.pico-sdk\\picotool\\2.1.0\\picotool\\picotool.exe' load '${command:raspberry-pi-pico.launchTargetPath}' -x"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated"
-            },
-            "problemMatcher": [],
-            "group": {
-                "kind": "test",
-                "isDefault": false
             }
         }
     ]
