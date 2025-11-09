@@ -26,10 +26,9 @@ static uint64_t palette[32];
 
 static void __not_in_flash_func(memset64)(uint64_t *dst, const uint64_t data, uint32_t size)
 {
-  dst[0] = data;
-
-  for (int i = 1; i < size; i++)
-    *++dst = data;
+  uint64_t *end = dst + size;
+  while (dst < end)
+    *dst++ = data;
 }
 
 static uint64_t get_ser_diff_data(uint16_t dataR, uint16_t dataG, uint16_t dataB)
@@ -56,15 +55,15 @@ static uint64_t get_ser_diff_data(uint16_t dataR, uint16_t dataG, uint16_t dataB
     bB |= (bB ^ 1) << 1;
 
 #ifdef DVI_PIN_invert_diffpairs
-      bR ^= 0b11;
-      bG ^= 0b11;
-      bB ^= 0b11;
+    bR ^= 0b11;
+    bG ^= 0b11;
+    bB ^= 0b11;
 #endif
 
 #ifdef DVI_PIN_RGB_notBGR
-      d6 = (bR << 4) | (bG << 2) | (bB << 0);
+    d6 = (bR << 4) | (bG << 2) | (bB << 0);
 #else
-      d6 = (bB << 4) | (bG << 2) | (bR << 0);
+    d6 = (bB << 4) | (bG << 2) | (bR << 0);
 #endif
 
     out64 |= d6;
@@ -137,16 +136,19 @@ static void __not_in_flash_func(dma_handler_dvi)()
     uint8_t *scr_buf = &screen_buf[(uint16_t)(y / video_mode.div) * V_BUF_W / 2];
     uint64_t *line_buf = active_buf;
 
-    for (int i = h_visible_area; i--;)
+    for (int i = 0; i < h_visible_area; i++)
     {
       uint8_t c2 = *scr_buf++;
-      uint64_t *c64 = &palette[(c2 & 0xf) * 2];
-      *line_buf++ = *c64++;
-      *line_buf++ = *c64;
-      c2 >>= 4;
-      c64 = &palette[(c2 & 0xf) * 2];
-      *line_buf++ = *c64++;
-      *line_buf++ = *c64;
+      uint8_t pixel1 = c2 & 0xf;
+      uint8_t pixel2 = c2 >> 4;
+
+      uint64_t *palette_ptr = &palette[pixel1 << 1];
+      *line_buf++ = *palette_ptr++;
+      *line_buf++ = *palette_ptr;
+
+      palette_ptr = &palette[pixel2 << 1];
+      *line_buf++ = *palette_ptr++;
+      *line_buf++ = *palette_ptr;
     }
 
     // horizontal sync
@@ -258,10 +260,10 @@ void start_dvi(video_mode_t v_mode)
   dma_channel_configure(
       dma_ch0,
       &c0,
-      &PIO_DVI->txf[SM_DVI],     // write address
-      &v_out_dma_buf[0][0],      // read address
+      &PIO_DVI->txf[SM_DVI], // write address
+      &v_out_dma_buf[0][0],  // read address
       whole_line,            //
-      false                      // don't start yet
+      false                  // don't start yet
   );
 
   // control DMA channel
