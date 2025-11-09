@@ -448,20 +448,7 @@ void print_settings()
 
 void handle_serial_menu()
 {
-    char inchar = 0;
-
-    while (1)
-    {
-        sleep_ms(500);
-
-        int c = getchar_timeout_us(1000);
-
-        if (c != PICO_ERROR_TIMEOUT)
-        {
-            inchar = 'h';
-            break;
-        }
-    }
+    char inchar = 'h';
 
     printf(" Entering the configuration mode\n\n");
 
