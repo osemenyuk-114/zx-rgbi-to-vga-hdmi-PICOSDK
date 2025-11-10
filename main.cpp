@@ -20,6 +20,7 @@ extern "C"
 #include "settings.h"
 #include "v_buf.h"
 #include "video_output.h"
+#include "osd_menu.h"
 }
 
 #define PIN_LED (25u)
@@ -51,6 +52,8 @@ void setup()
   set_scanlines_mode();
   start_video_output(settings.video_out_type);
 
+  osd_init();
+
   start_core0 = true;
 
   printf("  Starting...\n\n");
@@ -58,10 +61,12 @@ void setup()
 
 void loop()
 {
-  char c = get_menu_input(500);
+  char c = get_menu_input(10);
 
   if (c != 0)
     handle_serial_menu();
+
+  osd_update();
 }
 
 void __attribute__((weak)) setup1()

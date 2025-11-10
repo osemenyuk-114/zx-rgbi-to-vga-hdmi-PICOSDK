@@ -35,7 +35,7 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 pico_sdk_init()
 
 # Add executable
-add_executable(${EXECUTABLE_NAME} dvi.c g_config.c main.cpp rgb_capture.c serial_menu.cpp settings.c v_buf.c vga.c video_output.c)
+add_executable(${EXECUTABLE_NAME} dvi.c g_config.c main.cpp osd_menu.c rgb_capture.c serial_menu.cpp settings.c v_buf.c vga.c video_output.c)
 
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME} ${CMAKE_CURRENT_LIST_DIR}/programs.pio)
