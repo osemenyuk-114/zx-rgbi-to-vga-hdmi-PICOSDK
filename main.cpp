@@ -61,12 +61,15 @@ void setup()
 
 void loop()
 {
-  char c = get_menu_input(10);
-
-  if (c != 0)
-    handle_serial_menu();
-
   osd_update();
+
+  if (!osd_state.visible)
+  {
+    char c = get_menu_input(100);
+
+    if (c != 0)
+      handle_serial_menu();
+  }
 }
 
 void __attribute__((weak)) setup1()
