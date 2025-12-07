@@ -16,6 +16,7 @@
 extern "C"
 {
 #include "g_config.h"
+#include "ff_osd_i2c.h"
 #include "rgb_capture.h"
 #include "settings.h"
 #include "v_buf.h"
@@ -88,6 +89,8 @@ void __attribute__((weak)) setup1()
   gpio_set_dir(PIN_LED, GPIO_OUT);
   gpio_put(PIN_LED, 0);
 
+  setup_i2c_slave();
+
   while (!start_core0)
     sleep_ms(10);
 
@@ -98,7 +101,13 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
 {
   uint32_t frame_count_tmp1 = frame_count;
 
-  sleep_ms(100);
+  // sleep_ms(100);
+  //  Call osd_process frequently to keep up with I2C data
+  for (int i = 0; i < 100; i++)
+  {
+    i2c_process();
+    sleep_ms(1);
+  }
 
   if (frame_count > 1)
   {

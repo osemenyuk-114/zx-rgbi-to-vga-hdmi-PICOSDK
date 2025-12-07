@@ -14,6 +14,7 @@
 extern "C"
 {
 #include "g_config.h"
+#include "ff_osd_i2c.h"
 #include "v_buf.h"
 #include "settings.h"
 #include "rgb_capture.h"
@@ -230,7 +231,8 @@ void print_test_menu()
     printf("  1   draw welcome image (vertical stripes)\n");
     printf("  2   draw welcome image (horizontal stripes)\n");
     printf("  3   draw \"NO SIGNAL\" screen\n");
-    printf("  i   show captured frame count\n\n");
+    printf("  i   show captured frame count\n");
+    printf("  d   show I2C display data\n\n");
 
     printf("  p   show configuration\n");
     printf("  h   show help (this menu)\n");
@@ -1138,6 +1140,28 @@ void handle_serial_menu()
                     printf("  Current frame count ......... ");
                     printf("%d\n", frame_count);
                     break;
+
+                case 'd':
+                {
+                    printf("\n      * I2C Display Data *\n\n");
+                    printf("  Display on: %s\n", i2c_display.on ? "Yes" : "No");
+                    printf("  Rows: %d\n", i2c_display.rows);
+                    printf("  Cols: %d\n", i2c_display.cols);
+
+                    printf("\n  Text content:\n");
+                    for (int row = 0; row < i2c_display.rows && row < 4; row++)
+                    {
+                        printf("    Row %d: Height bits: %02x \"", row, (i2c_display.heights >> row) & 1);
+                        for (int col = 0; col < i2c_display.cols && col < 40; col++)
+                        {
+                            char c = i2c_display.text[row][col];
+                            printf("%c", (c >= 32 && c < 127) ? c : '.');
+                        }
+                        printf("\"\n");
+                    }
+                    printf("\n");
+                    break;
+                }
 
                 case '1':
                 case '2':

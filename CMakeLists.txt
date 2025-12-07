@@ -34,6 +34,9 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# Add pico_i2c_slave library
+add_subdirectory(lib/pico_i2c_slave)
+
 # Add executable
 add_executable(${EXECUTABLE_NAME})
 
@@ -41,6 +44,7 @@ target_sources(
     ${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
+    ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd_i2c.c
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp 
     ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
@@ -62,6 +66,7 @@ pico_enable_stdio_usb(${EXECUTABLE_NAME} 1)
 # Add the standard include files to the build
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave/i2c_slave/include
 )
 
 # Add any user requested libraries
@@ -69,9 +74,11 @@ target_link_libraries(${EXECUTABLE_NAME}
     hardware_pio 
     hardware_dma 
     hardware_flash 
+    hardware_i2c
     pico_multicore 
     pico_unique_id  
     pico_stdlib
+    pico_i2c_slave
 )
 
 target_compile_options(${EXECUTABLE_NAME} PRIVATE 
