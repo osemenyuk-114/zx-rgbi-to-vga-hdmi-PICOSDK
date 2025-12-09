@@ -12,13 +12,10 @@
 #ifdef OSD_MENU_ENABLE
 #include "osd_menu.h"
 
-static bool osd_transparency = true;
 static uint16_t osd_start_x;
 static uint16_t osd_end_x;
 static uint16_t osd_start_y;
 static uint16_t osd_end_y;
-static int osd_start_buf;
-static int osd_end_buf;
 #endif
 
 extern settings_t settings;
@@ -43,7 +40,7 @@ void __not_in_flash_func(dma_handler_vga)()
 {
   static uint16_t y = 0;
 
-  static uint8_t *screen_buf = NULL;
+  static uint8_t *scr_buffer = NULL;
 
   dma_hw->ints0 = 1u << dma_ch1;
 
@@ -52,7 +49,7 @@ void __not_in_flash_func(dma_handler_vga)()
   if (y == video_mode.whole_frame)
   {
     y = 0;
-    screen_buf = get_v_buf_out();
+    scr_buffer = get_v_buf_out();
   }
 
   if (y >= video_mode.v_visible_area && y < (video_mode.v_visible_area + video_mode.v_front_porch))
@@ -74,7 +71,7 @@ void __not_in_flash_func(dma_handler_vga)()
     return;
   }
 
-  if (!(screen_buf))
+  if (!(scr_buffer))
   {
     dma_channel_set_read_addr(dma_ch1, &v_out_dma_buf[2], false);
     return;
@@ -185,7 +182,7 @@ void __not_in_flash_func(dma_handler_vga)()
   }
 
   uint16_t scaled_y = (y - v_margin) / video_mode.div; // represents the line in the original captured image
-  uint8_t *scr_line = &screen_buf[scaled_y * (V_BUF_W / 2)];
+  uint8_t *scr_line = &scr_buffer[scaled_y * (V_BUF_W / 2)];
   uint16_t *line_buf = (uint16_t *)v_out_dma_buf[active_buf_idx];
 
   // left margin
@@ -202,9 +199,8 @@ void __not_in_flash_func(dma_handler_vga)()
 
     int x = 0;
 
-    // ultra-fast direct byte processing for pre-OSD area with loop unrolling
-    while ((x + 4) <= osd_start_buf)
-    {
+    while ((x + 4) <= osd_start_x)
+    { // ultra-fast direct byte processing for pre-OSD area with loop unrolling
       *line_buf++ = palette[*scr_line++];
       *line_buf++ = palette[*scr_line++];
       *line_buf++ = palette[*scr_line++];
@@ -213,81 +209,28 @@ void __not_in_flash_func(dma_handler_vga)()
       x += 4;
     }
 
-    while (x < osd_start_buf)
+    while (x < osd_start_x)
     {
       *line_buf++ = palette[*scr_line++];
       x++;
     }
 
-    // process 4 bytes at a time for better performance
-    while ((x + 4) <= osd_end_buf)
-    {                                  // check if this entire 4-byte block is fully within OSD boundaries
-      int screen_x_start = x << 1;     // first pixel of block
-      int screen_x_end = (x + 3) << 1; // last pixel of block
-
-      if (screen_x_start >= osd_start_x && (screen_x_end + 1) < osd_end_x)
-      { // entire 4-byte block is OSD - direct OSD buffer processing
-        uint8_t scr_pixel = *scr_line++;
-        uint8_t osd_pixel = *osd_line++;
-        uint8_t mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-        uint8_t pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-        *line_buf++ = palette[pixel];
-
-        scr_pixel = *scr_line++;
-        osd_pixel = *osd_line++;
-        mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-        pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-        *line_buf++ = palette[pixel];
-
-        scr_pixel = *scr_line++;
-        osd_pixel = *osd_line++;
-        mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-        pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-        *line_buf++ = palette[pixel];
-
-        scr_pixel = *scr_line++;
-        osd_pixel = *osd_line++;
-        mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-        pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-        *line_buf++ = palette[pixel];
-      }
-      else
-      { // block spans boundary - process individually
-        for (int i = 0; i < 4; i++)
-        {
-          uint8_t scr_pixel = *scr_line++;
-          uint8_t osd_pixel = *osd_line++;
-          uint8_t mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-          uint8_t pixel;
-          int pixel_x = (x + i) << 1;
-
-          if (pixel_x >= osd_start_x && (pixel_x + 1) < osd_end_x)
-            pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-          else
-            pixel = scr_pixel;
-
-          *line_buf++ = palette[pixel];
-        }
-      }
+    while ((x + 4) <= osd_end_x)
+    { // ultra-simplified OSD compositing with optimized unrolling
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
 
       x += 4;
+      scr_line += 4;
     }
 
-    while (x < osd_end_buf)
+    while (x < osd_end_x)
     { // handle remaining bytes (0-3 bytes)
-      uint8_t scr_pixel = *scr_line++;
-      uint8_t osd_pixel = *osd_line++;
-      uint8_t mask = ((osd_pixel & 0x0F) ? 0x0F : 0) | ((osd_pixel & 0xF0) ? 0xF0 : 0);
-      uint8_t pixel;
-      int screen_x_base = x << 1;
-
-      if (screen_x_base >= osd_start_x && (screen_x_base + 1) < osd_end_x)
-        pixel = (osd_pixel & mask) | (scr_pixel & ~mask);
-      else
-        pixel = scr_pixel;
-
-      *line_buf++ = palette[pixel];
+      *line_buf++ = palette[*osd_line++];
       x++;
+      scr_line++;
     }
 
     while ((x + 4) <= h_visible_area)
@@ -365,22 +308,11 @@ void start_vga(video_mode_t v_mode)
     v_margin = 0;
 
 #ifdef OSD_MENU_ENABLE
-  osd_start_x = h_visible_area - OSD_WIDTH / 2;
-  osd_end_x = osd_start_x + OSD_WIDTH;
+  osd_start_x = (h_visible_area - OSD_WIDTH / 2) / 2;
+  osd_end_x = osd_start_x + OSD_WIDTH / 2;
 
   osd_start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - OSD_HEIGHT) / 2;
   osd_end_y = osd_start_y + OSD_HEIGHT;
-
-  osd_start_buf = osd_start_x >> 1;
-  osd_end_buf = (osd_end_x + 1) >> 1;
-
-  // clamp to visible area
-  if (osd_start_buf < 0)
-    osd_start_buf = 0;
-
-  if (osd_end_buf > h_visible_area)
-    osd_end_buf = h_visible_area;
-
 #endif
 
   set_sys_clock_khz(video_mode.sys_freq, true);

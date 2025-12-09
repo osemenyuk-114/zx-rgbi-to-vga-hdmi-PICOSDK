@@ -34,9 +34,6 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add pico_i2c_slave library
-add_subdirectory(lib/pico_i2c_slave)
-
 # Add executable
 add_executable(${EXECUTABLE_NAME})
 
