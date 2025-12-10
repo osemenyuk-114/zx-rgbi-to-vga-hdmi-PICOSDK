@@ -21,16 +21,6 @@
 #define OSD_COLOR_SELECTED 0xF   // Bright white
 #define OSD_COLOR_BORDER 0x7     // White
 
-// Border characters (custom font entries in high ASCII range)
-#define OSD_CHAR_BORDER_TL 128 // Top-left corner
-#define OSD_CHAR_BORDER_TR 129 // Top-right corner
-#define OSD_CHAR_BORDER_BL 130 // Bottom-left corner
-#define OSD_CHAR_BORDER_BR 131 // Bottom-right corner
-#define OSD_CHAR_BORDER_T 132  // Horizontal line - top
-#define OSD_CHAR_BORDER_L 133  // Vertical line - left
-#define OSD_CHAR_BORDER_B 134  // Horizontal line - bottom
-#define OSD_CHAR_BORDER_R 135  // Vertical line - right
-
 #define OSD_MENU_TIMEOUT_US 10000000 // 10 seconds
 
 // Menu layout constants
@@ -97,6 +87,7 @@ extern osd_menu_nav_t osd_menu;
 extern uint8_t osd_buffer[OSD_BUFFER_SIZE];
 extern char osd_text_buffer[OSD_TEXT_BUFFER_SIZE];    // Text buffer for menu content
 extern uint8_t osd_text_colors[OSD_TEXT_BUFFER_SIZE]; // High nibble: fg_color, Low nibble: bg_color
+extern uint8_t osd_text_heights[OSD_LINES];           // 0 = normal height, 1 = double height (per line)
 extern const uint8_t osd_font_8x8[256][8];
 
 void osd_init();
@@ -117,14 +108,17 @@ void osd_render_text_to_buffer(); // Render text buffer to OSD pixel buffer
 void osd_draw_border();           // Draw border using special characters
 
 void osd_draw_char(uint8_t *buffer, uint16_t buf_width, uint16_t x, uint16_t y,
-                   char c, uint8_t fg_color, uint8_t bg_color);
+                   char c, uint8_t fg_color, uint8_t bg_color, uint8_t height);
 
 // Text buffer helpers
-void osd_text_print(uint8_t line, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color);
-void osd_text_print_centered(uint8_t line, const char *str, uint8_t fg_color, uint8_t bg_color);
-void osd_text_printf(uint8_t line, uint8_t col, uint8_t fg_color, uint8_t bg_color, const char *format, ...);
+void osd_text_print(uint8_t line, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
+void osd_text_print_centered(uint8_t line, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
+void osd_text_printf(uint8_t line, uint8_t col, uint8_t fg_color, uint8_t bg_color, uint8_t height, const char *format, ...);
 void osd_text_set_char(uint8_t line, uint8_t col, char c, uint8_t fg_color, uint8_t bg_color);
 
 void osd_adjust_image_parameter(uint8_t param_index, int8_t direction);
 void osd_adjust_video_mode(int8_t direction);
 void osd_adjust_capture_parameter(uint8_t param_index, int8_t direction);
+
+// POC: Render I2C display data to OSD
+void osd_render_i2c_display();
