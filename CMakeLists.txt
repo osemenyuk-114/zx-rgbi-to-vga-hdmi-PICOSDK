@@ -34,6 +34,18 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# Fetch external dependencies
+include(FetchContent)
+
+# Fetch pico_i2c_slave library to lib folder
+FetchContent_Declare(
+    pico_i2c_slave
+    GIT_REPOSITORY https://github.com/vmilea/pico_i2c_slave.git
+    GIT_TAG master
+    SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave
+)
+FetchContent_MakeAvailable(pico_i2c_slave)
+
 # Add executable
 add_executable(${EXECUTABLE_NAME})
 
