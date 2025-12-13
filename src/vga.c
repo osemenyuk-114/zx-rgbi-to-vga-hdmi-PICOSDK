@@ -11,14 +11,10 @@
 
 #ifdef OSD_MENU_ENABLE
 #include "osd_menu.h"
-
-static uint16_t osd_start_x;
-static uint16_t osd_end_x;
-static uint16_t osd_start_y;
-static uint16_t osd_end_y;
 #endif
 
 extern settings_t settings;
+extern osd_mode_t osd_mode;
 
 static int dma_ch0;
 static int dma_ch1;
@@ -191,15 +187,15 @@ void __not_in_flash_func(dma_handler_vga)()
 
 #ifdef OSD_MENU_ENABLE
   // main image area with OSD compositing
-  bool osd_active = osd_state.visible && (scaled_y >= osd_start_y && scaled_y < osd_end_y);
+  bool osd_active = osd_state.visible && (scaled_y >= osd_mode.start_y && scaled_y < osd_mode.end_y);
 
   if (osd_active)
   { // calculate OSD buffer line offset using scaled coordinates (2 pixels per byte)
-    uint8_t *osd_line = &osd_buffer[(scaled_y - osd_start_y) * (OSD_WIDTH / 2)];
+    uint8_t *osd_line = &osd_buffer[(scaled_y - osd_mode.start_y) * (osd_mode.width / 2)];
 
     int x = 0;
 
-    while ((x + 4) <= osd_start_x)
+    while ((x + 4) <= osd_mode.start_x)
     { // ultra-fast direct byte processing for pre-OSD area with loop unrolling
       *line_buf++ = palette[*scr_line++];
       *line_buf++ = palette[*scr_line++];
@@ -209,28 +205,28 @@ void __not_in_flash_func(dma_handler_vga)()
       x += 4;
     }
 
-    while (x < osd_start_x)
+    while (x < osd_mode.start_x)
     {
       *line_buf++ = palette[*scr_line++];
       x++;
     }
 
-    while ((x + 4) <= osd_end_x)
+    while ((x + 4) <= osd_mode.end_x)
     { // ultra-simplified OSD compositing with optimized unrolling
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
+      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
+      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
+      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
 
       x += 4;
-      scr_line += 4;
+      // scr_line += 4;
     }
 
-    while (x < osd_end_x)
+    while (x < osd_mode.end_x)
     { // handle remaining bytes (0-3 bytes)
-      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
       x++;
-      scr_line++;
+      // scr_line++;
     }
 
     while ((x + 4) <= h_visible_area)
@@ -285,6 +281,30 @@ void set_vga_scanlines_mode(bool sl_mode)
   scanlines_mode = sl_mode;
 }
 
+#ifdef OSD_MENU_ENABLE
+void set_vga_osd_position(uint8_t position)
+{
+  switch (position)
+  {
+  case 0:
+    osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
+    osd_mode.start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - osd_mode.height) / 2;
+    break;
+
+  case 1:
+    osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
+    osd_mode.start_y = 8 + v_margin / video_mode.div;
+    break;
+
+  default:
+    break;
+  }
+
+  osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
+  osd_mode.end_y = osd_mode.start_y + osd_mode.height;
+}
+#endif
+
 void start_vga(video_mode_t v_mode)
 {
   video_mode = v_mode;
@@ -306,14 +326,6 @@ void start_vga(video_mode_t v_mode)
 
   if (v_margin < 0)
     v_margin = 0;
-
-#ifdef OSD_MENU_ENABLE
-  osd_start_x = (h_visible_area - OSD_WIDTH / 2) / 2;
-  osd_end_x = osd_start_x + OSD_WIDTH / 2;
-
-  osd_start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - OSD_HEIGHT) / 2;
-  osd_end_y = osd_start_y + OSD_HEIGHT;
-#endif
 
   set_sys_clock_khz(video_mode.sys_freq, true);
   sleep_ms(10);

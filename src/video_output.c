@@ -49,6 +49,14 @@ void set_scanlines_mode()
     set_vga_scanlines_mode(settings.scanlines_mode);
 }
 
+void set_osd_position(uint8_t position)
+{
+  if (settings.video_out_type == DVI)
+    set_dvi_osd_position(position);
+  else if (settings.video_out_type == VGA)
+    set_vga_osd_position(position);
+}
+
 void draw_welcome_screen(video_mode_t video_mode)
 {
   int16_t h_visible_area = (uint16_t)(video_mode.h_visible_area / (video_mode.div * 4)) * 4;
@@ -143,13 +151,13 @@ void draw_no_signal(video_mode_t video_mode)
 
   memset(v_buf, 0, V_BUF_H * V_BUF_W / 2);
 
-  for (int row = 0; row < 14; ++row)
+  for (int line = 0; line < 14; ++line)
     for (int col = 0; col < 114; ++col)
     {
-      c = (nosignal[row][col] == 'x') ? 0b0111 : 0b0000;
+      c = (nosignal[line][col] == 'x') ? 0b0111 : 0b0000;
 
       if (col & 1)
-        v_buf[(y + row) * V_BUF_W / 2 + x + col / 2] = c2 | (c << 4);
+        v_buf[(y + line) * V_BUF_W / 2 + x + col / 2] = c2 | (c << 4);
       else
         c2 = c;
     }

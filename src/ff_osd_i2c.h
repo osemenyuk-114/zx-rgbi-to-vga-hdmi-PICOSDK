@@ -24,6 +24,7 @@ typedef struct config_t
 } config_t;
 
 extern display_t i2c_display;
+extern uint8_t i2c_buttons_rx;
 
 void i2c_process();
 void setup_i2c_slave();

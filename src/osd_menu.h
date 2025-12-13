@@ -1,15 +1,15 @@
 #pragma once
 
 // OSD dimensions
-#define OSD_WIDTH 240
+#define OSD_WIDTH 320
 #define OSD_HEIGHT 120
 #define OSD_BUFFER_SIZE (OSD_WIDTH * OSD_HEIGHT / 2) // 14400 bytes (2 pixels per byte)
 
 #define OSD_FONT_WIDTH 8
 #define OSD_FONT_HEIGHT 8
-#define OSD_CHARS_PER_LINE (OSD_WIDTH / OSD_FONT_WIDTH)       // 30 characters
-#define OSD_LINES (OSD_HEIGHT / OSD_FONT_HEIGHT)              // 15 lines
-#define OSD_TEXT_BUFFER_SIZE (OSD_CHARS_PER_LINE * OSD_LINES) // 450 bytes
+#define OSD_COLUMNS (OSD_WIDTH / OSD_FONT_WIDTH)      // 30 characters
+#define OSD_ROWS (OSD_HEIGHT / OSD_FONT_HEIGHT)       // 15 rows
+#define OSD_TEXT_BUFFER_SIZE (OSD_COLUMNS * OSD_ROWS) // 450 bytes
 
 #define OSD_BTN_UP 26
 #define OSD_BTN_DOWN 27
@@ -24,9 +24,9 @@
 #define OSD_MENU_TIMEOUT_US 10000000 // 10 seconds
 
 // Menu layout constants
-#define OSD_TITLE_LINE 1
-#define OSD_SUBTITLE_LINE 3
-#define OSD_MENU_START_LINE 5
+#define OSD_TITLE_ROW 1
+#define OSD_SUBTITLE_ROW 3
+#define OSD_MENU_START_ROW 5
 
 #define MENU_TYPE_MAIN 0
 #define MENU_TYPE_OUTPUT 1
@@ -61,6 +61,20 @@ typedef struct
 
 typedef struct
 {
+    uint16_t start_x;
+    uint16_t end_x;
+    uint16_t start_y;
+    uint16_t end_y;
+    uint16_t width;
+    uint16_t height;
+    uint16_t buffer_size;
+    uint8_t rows;
+    uint8_t columns;
+    uint16_t text_buffer_size;
+} osd_mode_t;
+
+typedef struct
+{
     bool up_pressed;
     bool down_pressed;
     bool sel_pressed;
@@ -84,10 +98,11 @@ typedef struct
 extern osd_state_t osd_state;
 extern osd_buttons_t osd_buttons;
 extern osd_menu_nav_t osd_menu;
+extern osd_mode_t osd_mode;
 extern uint8_t osd_buffer[OSD_BUFFER_SIZE];
 extern char osd_text_buffer[OSD_TEXT_BUFFER_SIZE];    // Text buffer for menu content
 extern uint8_t osd_text_colors[OSD_TEXT_BUFFER_SIZE]; // High nibble: fg_color, Low nibble: bg_color
-extern uint8_t osd_text_heights[OSD_LINES];           // 0 = normal height, 1 = double height (per line)
+extern uint8_t osd_text_heights[OSD_ROWS];            // 0 = normal height, 1 = double height (per row)
 extern const uint8_t osd_font_8x8[256][8];
 
 void osd_init();
@@ -111,10 +126,10 @@ void osd_draw_char(uint8_t *buffer, uint16_t buf_width, uint16_t x, uint16_t y,
                    char c, uint8_t fg_color, uint8_t bg_color, uint8_t height);
 
 // Text buffer helpers
-void osd_text_print(uint8_t line, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
-void osd_text_print_centered(uint8_t line, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
-void osd_text_printf(uint8_t line, uint8_t col, uint8_t fg_color, uint8_t bg_color, uint8_t height, const char *format, ...);
-void osd_text_set_char(uint8_t line, uint8_t col, char c, uint8_t fg_color, uint8_t bg_color);
+void osd_text_print(uint8_t row, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
+void osd_text_print_centered(uint8_t row, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height);
+void osd_text_printf(uint8_t row, uint8_t col, uint8_t fg_color, uint8_t bg_color, uint8_t height, const char *format, ...);
+void osd_text_set_char(uint8_t row, uint8_t col, char c, uint8_t fg_color, uint8_t bg_color);
 
 void osd_adjust_image_parameter(uint8_t param_index, int8_t direction);
 void osd_adjust_video_mode(int8_t direction);

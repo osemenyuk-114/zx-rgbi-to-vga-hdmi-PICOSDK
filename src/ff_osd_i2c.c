@@ -211,7 +211,7 @@ static void __not_in_flash_func(ff_osd_process)(void)
                 {
                 case OSD_BUTTONS:
                     /* button state: Gotek -> OSD */
-                    uint8_t i2c_buttons_rx = x & 0x0f;
+                    i2c_buttons_rx = x & 0x0f;
                     break;
 
                 case OSD_ROWS:
