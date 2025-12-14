@@ -403,12 +403,12 @@ void __not_in_flash_func(i2c_slave_handler)(i2c_inst_t *i2c, i2c_slave_event_t e
     }
 }
 
-void i2c_process(void)
+void ff_osd_i2c_process(void)
 {
     return i2c_osd_protocol ? ff_osd_process() : lcd_process();
 }
 
-void setup_i2c_slave()
+void ff_osd_i2c_init()
 {
     i2c_osd_protocol = true;
 

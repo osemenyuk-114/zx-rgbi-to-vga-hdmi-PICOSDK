@@ -34,17 +34,26 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# Build options
+# These control which source files are compiled and which libraries are linked
+#set(OSD_MENU_ENABLE 1)
+set(OSD_FF_ENABLE 1)
+
 # Fetch external dependencies
 include(FetchContent)
 
-# Fetch pico_i2c_slave library to lib folder
-FetchContent_Declare(
-    pico_i2c_slave
-    GIT_REPOSITORY https://github.com/vmilea/pico_i2c_slave.git
-    GIT_TAG master
-    SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave
-)
-FetchContent_MakeAvailable(pico_i2c_slave)
+# Fetch pico_i2c_slave library to lib folder (only if OSD_FF_ENABLE is defined)
+if(DEFINED OSD_FF_ENABLE)
+    FetchContent_Declare(
+        pico_i2c_slave
+        GIT_REPOSITORY https://github.com/vmilea/pico_i2c_slave.git
+        GIT_TAG master
+        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave
+    )
+    FetchContent_Populate(pico_i2c_slave)
+    # Add only the i2c_slave library, not the entire project (excludes examples)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave/i2c_slave EXCLUDE_FROM_ALL)
+endif()
 
 # Add executable
 add_executable(${EXECUTABLE_NAME})
@@ -53,9 +62,7 @@ target_sources(
     ${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd_i2c.c
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp 
-    ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.cpp 
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
@@ -63,6 +70,30 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video_output.c
 )
+
+# Conditionally add OSD common code (used by both MENU and FF)
+if(DEFINED OSD_MENU_ENABLE OR DEFINED OSD_FF_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd.c
+    )
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_ENABLE)
+endif()
+
+# Conditionally add OSD menu source files
+if(DEFINED OSD_MENU_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c
+    )
+endif()
+
+# Conditionally add FlashFloppy OSD source files
+if(DEFINED OSD_FF_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd_i2c.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd.c
+    )
+endif()
+
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/src/programs.pio
@@ -75,24 +106,45 @@ pico_enable_stdio_usb(${EXECUTABLE_NAME} 1)
 # Add the standard include files to the build
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
-    ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave/i2c_slave/include
 )
+
+# Conditionally add pico_i2c_slave include directory
+if(DEFINED OSD_FF_ENABLE)
+    target_include_directories(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/lib/pico_i2c_slave/i2c_slave/include
+    )
+endif()
 
 # Add any user requested libraries
 target_link_libraries(${EXECUTABLE_NAME}
     hardware_pio 
     hardware_dma 
     hardware_flash 
-    hardware_i2c
     pico_multicore 
     pico_unique_id  
     pico_stdlib
-    pico_i2c_slave
 )
+
+# Conditionally link I2C libraries for FlashFloppy OSD
+if(DEFINED OSD_FF_ENABLE)
+    target_link_libraries(${EXECUTABLE_NAME}
+        hardware_i2c
+        pico_i2c_slave
+    )
+endif()
 
 target_compile_options(${EXECUTABLE_NAME} PRIVATE 
     -O3 
 )
+
+# Add compile definitions for OSD features
+if(DEFINED OSD_MENU_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_MENU_ENABLE)
+endif()
+
+if(DEFINED OSD_FF_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_FF_ENABLE)
+endif()
 
 # Add linker flag to print memory usage
 target_link_options(${EXECUTABLE_NAME} PRIVATE
@@ -100,3 +152,8 @@ target_link_options(${EXECUTABLE_NAME} PRIVATE
 )
 
 pico_add_extra_outputs(${EXECUTABLE_NAME})
+
+# Extend the clean target to remove all object files (*.dir subdirectories only)
+set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES
+    "${CMAKE_BINARY_DIR}/CMakeFiles/${EXECUTABLE_NAME}.dir"
+)

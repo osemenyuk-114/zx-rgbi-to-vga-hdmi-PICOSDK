@@ -9,12 +9,12 @@
 #include "pio_programs.h"
 #include "v_buf.h"
 
-#ifdef OSD_MENU_ENABLE
-#include "osd_menu.h"
+#ifdef OSD_ENABLE
+#include "osd.h"
+extern osd_mode_t osd_mode;
 #endif
 
 extern settings_t settings;
-extern osd_mode_t osd_mode;
 
 static int dma_ch0;
 static int dma_ch1;
@@ -141,7 +141,7 @@ static void __not_in_flash_func(dma_handler_dvi)()
     uint8_t *scr_line = &scr_buffer[scaled_y * (V_BUF_W / 2)];
     uint64_t *line_buf = active_buf;
 
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
     // check if OSD is visible and overlaps with current scaled scanline
     bool osd_active = osd_state.visible && (scaled_y >= osd_mode.start_y && scaled_y < osd_mode.end_y);
 
@@ -240,17 +240,6 @@ static void __not_in_flash_func(dma_handler_dvi)()
     memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, sync_data[0b00], video_mode.h_back_porch);
   }
 }
-
-#ifdef OSD_MENU_ENABLE
-void set_dvi_osd_position(uint8_t position)
-{
-  osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
-  osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
-
-  osd_mode.start_y = (video_mode.v_visible_area / video_mode.div - osd_mode.height) / 2;
-  osd_mode.end_y = osd_mode.start_y + osd_mode.height;
-}
-#endif
 
 void start_dvi(video_mode_t v_mode)
 {

@@ -1,6 +1,8 @@
 #pragma once
 
-#if 1
+#define FONT_STYLE 2
+
+#if FONT_STYLE == 1
 
 // Border characters (custom font entries in high ASCII range)
 #define OSD_CHAR_BORDER_TL 128 // Top-left corner
@@ -127,7 +129,7 @@ const uint8_t osd_font[256][8] = {
 
 #endif
 
-#if 0
+#if FONT_STYLE == 2
 
 #define OSD_CHAR_BORDER_TL 0xc9 // Top-left corner
 #define OSD_CHAR_BORDER_TR 0xbb // Top-right corner

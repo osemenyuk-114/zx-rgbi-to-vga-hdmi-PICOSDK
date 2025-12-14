@@ -14,7 +14,10 @@
 extern "C"
 {
 #include "g_config.h"
+#ifdef OSD_FF_ENABLE
 #include "ff_osd_i2c.h"
+#include "ff_osd.h"
+#endif
 #include "v_buf.h"
 #include "settings.h"
 #include "rgb_capture.h"
@@ -76,9 +79,13 @@ void print_main_menu()
     printf("  d   set external clock divider\n");
     printf("  y   set video sync mode\n");
     printf("  t   set capture delay and image position\n");
-    printf("  m   set pin inversion mask\n\n");
+    printf("  m   set pin inversion mask\n");
 
-    printf("  p   show configuration\n");
+#ifdef OSD_FF_ENABLE
+    printf("  g   configure FlashFloppy OSD\n");
+#endif
+
+    printf("\n  p   show configuration\n");
     printf("  h   show help (this menu)\n");
     printf("  q   exit configuration mode\n");
     printf("  w   save configuration\n");
@@ -223,6 +230,22 @@ void print_pin_inversion_mask_menu()
     printf("  h   show help (this menu)\n");
     printf("  q   exit to main menu\n\n");
 }
+
+#ifdef OSD_FF_ENABLE
+void print_ff_osd_menu()
+{
+    printf("\n      * FlashFloppy OSD configuration *\n\n");
+
+    printf("  i   shift OSD UP\n");
+    printf("  k   shift OSD DOWN\n");
+    printf("  j   shift OSD LEFT\n");
+    printf("  l   shift OSD RIGHT\n\n");
+
+    printf("  p   show configuration\n");
+    printf("  h   show help (this menu)\n");
+    printf("  q   exit to main menu\n\n");
+}
+#endif
 
 void print_test_menu()
 {
@@ -425,6 +448,38 @@ void print_pin_inversion_mask()
     printf("  Pin inversion mask .......... ");
     printf("%s\n", binary_str);
 }
+
+#ifdef OSD_FF_ENABLE
+void print_ff_osd_config()
+{
+    printf("  OSD horizontal offset ...... ");
+    printf("%d\n", ff_osd_config.h_off);
+
+    printf("  OSD vertical offset ........ ");
+    printf("%d\n", ff_osd_config.v_off);
+
+    printf("  OSD minimum columns ........ ");
+    printf("%d\n", ff_osd_config.min_cols);
+
+    printf("  OSD maximum columns ........ ");
+    printf("%d\n", ff_osd_config.max_cols);
+
+    printf("  OSD rows ................... ");
+    printf("%d\n", ff_osd_config.rows);
+}
+
+void print_ff_osd_h_offset()
+{
+    printf("  OSD horizontal offset ...... ");
+    printf("%d\n", ff_osd_config.h_off);
+}
+
+void print_ff_osd_v_offset()
+{
+    printf("  OSD vertical offset ........ ");
+    printf("%d\n", ff_osd_config.v_off);
+}
+#endif
 
 void print_settings()
 {
@@ -1141,28 +1196,6 @@ void handle_serial_menu()
                     printf("%d\n", frame_count);
                     break;
 
-                case 'd':
-                {
-                    printf("\n      * I2C Display Data *\n\n");
-                    printf("  Display on: %s\n", i2c_display.on ? "Yes" : "No");
-                    printf("  Rows: %d\n", i2c_display.rows);
-                    printf("  Cols: %d\n", i2c_display.cols);
-
-                    printf("\n  Text content:\n");
-                    for (int row = 0; row < i2c_display.rows && row < 4; row++)
-                    {
-                        printf("    Row %d: Height bits: %02x \"", row, (i2c_display.heights >> row) & 1);
-                        for (int col = 0; col < i2c_display.cols && col < 40; col++)
-                        {
-                            char c = i2c_display.text[row][col];
-                            printf("%c", (c >= 32 && c < 127) ? c : '.');
-                        }
-                        printf("\"\n");
-                    }
-                    printf("\n");
-                    break;
-                }
-
                 case '1':
                 case '2':
                 case '3':
@@ -1201,6 +1234,85 @@ void handle_serial_menu()
 
             break;
         }
+
+#ifdef OSD_FF_ENABLE
+        case 'g':
+        {
+            inchar = 'h';
+
+            while (1)
+            {
+                if (inchar != 'h')
+                    inchar = get_menu_input(10);
+
+                switch (inchar)
+                {
+                case 'p':
+                    print_ff_osd_config();
+                    break;
+
+                case 'h':
+                    print_ff_osd_menu();
+                    break;
+
+                case 'i':
+                    ff_osd_config.v_off++;
+                    print_ff_osd_v_offset();
+                    break;
+
+                case 'k':
+                    ff_osd_config.v_off--;
+                    print_ff_osd_v_offset();
+                    break;
+
+                case 'j':
+                    ff_osd_config.h_off--;
+                    print_ff_osd_h_offset();
+                    break;
+
+                case 'l':
+                    ff_osd_config.h_off++;
+                    print_ff_osd_h_offset();
+                    break;
+
+                case 'd':
+                {
+                    printf("\n      * I2C Display Data *\n\n");
+                    printf("  Display on: %s\n", i2c_display.on ? "Yes" : "No");
+                    printf("  Rows: %d\n", i2c_display.rows);
+                    printf("  Cols: %d\n", i2c_display.cols);
+
+                    printf("\n  Text content:\n");
+                    for (int row = 0; row < i2c_display.rows && row < 4; row++)
+                    {
+                        printf("    Row %d: Height bits: %02x \"", row, (i2c_display.heights >> row) & 1);
+                        for (int col = 0; col < i2c_display.cols && col < 40; col++)
+                        {
+                            char c = i2c_display.text[row][col];
+                            printf("%c", (c >= 32 && c < 127) ? c : '.');
+                        }
+                        printf("\"\n");
+                    }
+                    printf("\n");
+                    break;
+                }
+
+                default:
+                    break;
+                }
+
+                if (inchar == 'q')
+                {
+                    inchar = 'h';
+                    break;
+                }
+
+                inchar = 0;
+            }
+
+            break;
+        }
+#endif
 
         case 'h':
             print_main_menu();

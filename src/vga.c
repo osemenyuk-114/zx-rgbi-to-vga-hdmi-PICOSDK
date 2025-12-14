@@ -9,12 +9,12 @@
 #include "pio_programs.h"
 #include "v_buf.h"
 
-#ifdef OSD_MENU_ENABLE
-#include "osd_menu.h"
+#ifdef OSD_ENABLE
+#include "osd.h"
+extern osd_mode_t osd_mode;
 #endif
 
 extern settings_t settings;
-extern osd_mode_t osd_mode;
 
 static int dma_ch0;
 static int dma_ch1;
@@ -185,7 +185,7 @@ void __not_in_flash_func(dma_handler_vga)()
   for (int x = h_margin; x--;)
     *line_buf++ = palette[0];
 
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
   // main image area with OSD compositing
   bool osd_active = osd_state.visible && (scaled_y >= osd_mode.start_y && scaled_y < osd_mode.end_y);
 
@@ -213,20 +213,20 @@ void __not_in_flash_func(dma_handler_vga)()
 
     while ((x + 4) <= osd_mode.end_x)
     { // ultra-simplified OSD compositing with optimized unrolling
-      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
-      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
-      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
-      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
 
       x += 4;
-      // scr_line += 4;
+      scr_line += 4;
     }
 
     while (x < osd_mode.end_x)
     { // handle remaining bytes (0-3 bytes)
-      *line_buf++ = palette[*osd_line++ ^ *scr_line++ | 0x88];
+      *line_buf++ = palette[*osd_line++];
       x++;
-      // scr_line++;
+      scr_line++;
     }
 
     while ((x + 4) <= h_visible_area)
@@ -265,7 +265,7 @@ void __not_in_flash_func(dma_handler_vga)()
       *line_buf++ = palette[*scr_line++];
       x++;
     }
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
   }
 #endif
 
@@ -280,30 +280,6 @@ void set_vga_scanlines_mode(bool sl_mode)
 {
   scanlines_mode = sl_mode;
 }
-
-#ifdef OSD_MENU_ENABLE
-void set_vga_osd_position(uint8_t position)
-{
-  switch (position)
-  {
-  case 0:
-    osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
-    osd_mode.start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - osd_mode.height) / 2;
-    break;
-
-  case 1:
-    osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
-    osd_mode.start_y = 8 + v_margin / video_mode.div;
-    break;
-
-  default:
-    break;
-  }
-
-  osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
-  osd_mode.end_y = osd_mode.start_y + osd_mode.height;
-}
-#endif
 
 void start_vga(video_mode_t v_mode)
 {

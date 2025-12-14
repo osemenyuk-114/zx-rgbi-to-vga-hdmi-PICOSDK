@@ -16,14 +16,21 @@
 extern "C"
 {
 #include "g_config.h"
-#include "ff_osd_i2c.h"
 #include "rgb_capture.h"
 #include "settings.h"
 #include "v_buf.h"
 #include "video_output.h"
 
+#ifdef OSD_ENABLE
+#include "osd.h"
+#endif
+
 #ifdef OSD_MENU_ENABLE
 #include "osd_menu.h"
+#endif
+
+#ifdef OSD_FF_ENABLE
+#include "ff_osd_i2c.h"
 #endif
 }
 
@@ -56,7 +63,7 @@ void setup()
   set_scanlines_mode();
   start_video_output(settings.video_out_type);
 
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
   osd_init();
 #endif
 
@@ -67,7 +74,7 @@ void setup()
 
 void loop()
 {
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
   osd_update();
 
   if (!osd_state.visible)
@@ -78,7 +85,7 @@ void loop()
     if (c != 0)
       handle_serial_menu();
 
-#ifdef OSD_MENU_ENABLE
+#ifdef OSD_ENABLE
   }
 #endif
 }
@@ -89,7 +96,9 @@ void __attribute__((weak)) setup1()
   gpio_set_dir(PIN_LED, GPIO_OUT);
   gpio_put(PIN_LED, 0);
 
-  setup_i2c_slave();
+#ifdef OSD_FF_ENABLE
+  ff_osd_i2c_init();
+#endif
 
   while (!start_core0)
     sleep_ms(10);
@@ -101,13 +110,16 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
 {
   uint32_t frame_count_tmp1 = frame_count;
 
-  // sleep_ms(100);
+#ifdef OSD_FF_ENABLE
   //  Call osd_process frequently to keep up with I2C data
   for (int i = 0; i < 100; i++)
   {
-    i2c_process();
+    ff_osd_i2c_process();
     sleep_ms(1);
   }
+#else
+  sleep_ms(100);
+#endif
 
   if (frame_count > 1)
   {

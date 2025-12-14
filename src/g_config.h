@@ -179,5 +179,14 @@ extern uint8_t g_v_buf[];
 // thick - show scanline twice in four lines
 #define SCANLINES_USE_THIN
 
+/* handled in CMakeLists.txt
 // enable OSD menu
 #define OSD_MENU_ENABLE
+
+// enable FlashFloppy OSD
+#define OSD_FF_ENABLE
+
+#if defined(OSD_MENU_ENABLE) || defined(OSD_FF_ENABLE)
+#define OSD_ENABLE
+#endif
+*/

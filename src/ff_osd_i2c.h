@@ -26,8 +26,8 @@ typedef struct config_t
 extern display_t i2c_display;
 extern uint8_t i2c_buttons_rx;
 
-void i2c_process();
-void setup_i2c_slave();
+void ff_osd_i2c_process();
+void ff_osd_i2c_init();
 
 #define OSD_BUTTON_LEFT 1
 #define OSD_BUTTON_RIGHT 2
