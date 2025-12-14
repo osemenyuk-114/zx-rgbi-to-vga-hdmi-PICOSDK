@@ -9,6 +9,11 @@
 #include "pio_programs.h"
 #include "v_buf.h"
 
+#define CAP_LINE_LENGTH 1024
+// the number of DMA buffers can be increased if there is image fluttering
+#define CAP_DMA_BUF_CNT 8
+#define CAP_DMA_BUF_SIZE (CAP_LINE_LENGTH * CAP_DMA_BUF_CNT)
+
 extern settings_t settings;
 
 static int dma_ch0;
@@ -284,7 +289,7 @@ void start_capture()
   if (settings.cap_sync_mode == SELF)
     pio_calculate_clkdiv_from_float((float)clock_get_hz(clk_sys) / (settings.frequency * 12.0), &div_int, &div_frac);
 
-    sm_config_set_clkdiv_int_frac(&c, div_int, div_frac);
+  sm_config_set_clkdiv_int_frac(&c, div_int, div_frac);
 
   pio_sm_init(PIO_CAP, SM_CAP, offset, &c);
   pio_sm_set_enabled(PIO_CAP, SM_CAP, true);
