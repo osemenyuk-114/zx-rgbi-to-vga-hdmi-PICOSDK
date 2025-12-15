@@ -14,17 +14,23 @@
 extern osd_mode_t osd_mode;
 #endif
 
+// sync pulse patterns (positive polarity)
+#define NO_SYNC 0b00000000
+#define V_SYNC 0b10000000
+#define H_SYNC 0b01000000
+#define VH_SYNC 0b11000000
+
 extern settings_t settings;
 
 static int dma_ch0;
 static int dma_ch1;
 static uint offset;
 
-static video_mode_t video_mode;
-static int16_t h_visible_area;
-static int16_t h_margin;
-static int16_t v_visible_area;
-static int16_t v_margin;
+extern video_mode_t video_mode;
+extern int16_t h_visible_area;
+extern int16_t h_margin;
+extern int16_t v_visible_area;
+extern int16_t v_margin;
 static bool scanlines_mode = false;
 
 static uint32_t *v_out_dma_buf[4];
@@ -281,27 +287,11 @@ void set_vga_scanlines_mode(bool sl_mode)
   scanlines_mode = sl_mode;
 }
 
-void start_vga(video_mode_t v_mode)
+void start_vga()
 {
-  video_mode = v_mode;
-
   int whole_line = video_mode.whole_line / video_mode.div;
   int h_sync_pulse_front = (video_mode.h_visible_area + video_mode.h_front_porch) / video_mode.div;
   int h_sync_pulse = video_mode.h_sync_pulse / video_mode.div;
-
-  h_visible_area = (uint16_t)(video_mode.h_visible_area / (video_mode.div * 4)) * 2;
-  h_margin = (h_visible_area - (uint8_t)(settings.frequency / 1000000) * (ACTIVE_VIDEO_TIME / 2)) / 2;
-
-  if (h_margin < 0)
-    h_margin = 0;
-
-  h_visible_area -= h_margin * 2;
-
-  v_visible_area = V_BUF_H * video_mode.div;
-  v_margin = ((int16_t)((video_mode.v_visible_area - v_visible_area) / (video_mode.div * 2) + 0.5)) * video_mode.div;
-
-  if (v_margin < 0)
-    v_margin = 0;
 
   set_sys_clock_khz(video_mode.sys_freq, true);
   sleep_ms(10);

@@ -36,8 +36,8 @@ pico_sdk_init()
 
 # Build options
 # These control which source files are compiled and which libraries are linked
-#set(OSD_MENU_ENABLE 1)
-set(OSD_FF_ENABLE 1)
+set(OSD_MENU_ENABLE 1)
+#set(OSD_FF_ENABLE 1)
 
 # Fetch external dependencies
 include(FetchContent)
@@ -89,7 +89,6 @@ endif()
 # Conditionally add FlashFloppy OSD source files
 if(DEFINED OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd_i2c.c
         ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd.c
     )
 endif()

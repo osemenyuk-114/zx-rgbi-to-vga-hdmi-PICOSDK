@@ -9,20 +9,90 @@
 #endif
 
 extern settings_t settings;
-extern video_out_type_t active_video_output;
+video_out_type_t active_video_output = VIDEO_OUT_TYPE_DEF;
+
+video_mode_t video_mode;
+int16_t h_visible_area;
+int16_t h_margin;
+int16_t v_visible_area;
+int16_t v_margin;
+
+extern osd_mode_t osd_mode;
+
+void set_video_mode_params(video_mode_t v_mode)
+{
+  video_mode = v_mode;
+
+  h_visible_area = (uint16_t)(video_mode.h_visible_area / (video_mode.div * 4)) * 2;
+  h_margin = (h_visible_area - (uint8_t)(settings.frequency / 1000000) * (ACTIVE_VIDEO_TIME / 2)) / 2;
+
+  if (h_margin < 0)
+    h_margin = 0;
+
+  h_visible_area -= h_margin * 2;
+
+  v_visible_area = V_BUF_H * video_mode.div;
+  v_margin = ((int16_t)((video_mode.v_visible_area - v_visible_area) / (video_mode.div * 2) + 0.5)) * video_mode.div;
+
+  if (v_margin < 0)
+    v_margin = 0;
+}
+
+#ifdef OSD_ENABLE
+void set_osd_position()
+{
+  switch (osd_mode.x)
+  {
+  case 0:
+    osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
+    break;
+
+  default:
+    osd_mode.start_x = osd_mode.x;
+    break;
+  }
+
+  osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
+
+  switch (osd_mode.y)
+  {
+  case 0:
+    osd_mode.start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - osd_mode.height) / 2;
+    break;
+
+  default:
+    osd_mode.start_y = osd_mode.y;
+    break;
+  }
+
+  osd_mode.end_y = osd_mode.start_y + osd_mode.height;
+}
+#endif
+
+void set_scanlines_mode()
+{
+  if (settings.video_out_type == VGA)
+    set_vga_scanlines_mode(settings.scanlines_mode);
+}
 
 void start_video_output(video_out_type_t output_type)
 {
   active_video_output = output_type;
 
+  set_video_mode_params(*(video_modes[settings.video_out_mode]));
+
+#ifdef OSD_ENABLE
+  set_osd_position();
+#endif
+
   switch (output_type)
   {
   case DVI:
-    start_dvi(*(video_modes[settings.video_out_mode]));
+    start_dvi(); //*(video_modes[settings.video_out_mode]));
     break;
 
   case VGA:
-    start_vga(*(video_modes[settings.video_out_mode]));
+    start_vga(); //*(video_modes[settings.video_out_mode]));
     break;
 
   default:
@@ -46,52 +116,6 @@ void stop_video_output()
     break;
   }
 }
-
-void set_scanlines_mode()
-{
-  if (settings.video_out_type == VGA)
-    set_vga_scanlines_mode(settings.scanlines_mode);
-}
-
-#ifdef OSD_ENABLE
-void set_osd_position(uint8_t position)
-{
-  video_mode_t video_mode = *(video_modes[settings.video_out_mode]);
-
-  int16_t h_visible_area = (uint16_t)(video_mode.h_visible_area / (video_mode.div * 4)) * 2;
-  int16_t h_margin = (h_visible_area - (uint8_t)(settings.frequency / 1000000) * (ACTIVE_VIDEO_TIME / 2)) / 2;
-
-  if (h_margin < 0)
-    h_margin = 0;
-
-  h_visible_area -= h_margin * 2;
-
-  int16_t v_visible_area = V_BUF_H * video_mode.div;
-  int16_t v_margin = ((int16_t)((video_mode.v_visible_area - v_visible_area) / (video_mode.div * 2) + 0.5)) * video_mode.div;
-
-  if (v_margin < 0)
-    v_margin = 0;
-
-  osd_mode.start_x = (h_visible_area - osd_mode.width / 2) / 2;
-  osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
-
-  switch (position)
-  {
-  case 0:
-    osd_mode.start_y = ((video_mode.v_visible_area - 2 * v_margin) / video_mode.div - osd_mode.height) / 2;
-    break;
-
-  case 1:
-    osd_mode.start_y = 8 + v_margin / video_mode.div;
-    break;
-
-  default:
-    break;
-  }
-
-  osd_mode.end_y = osd_mode.start_y + osd_mode.height;
-}
-#endif
 
 void draw_welcome_screen(video_mode_t video_mode)
 {

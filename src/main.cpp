@@ -30,14 +30,13 @@ extern "C"
 #endif
 
 #ifdef OSD_FF_ENABLE
-#include "ff_osd_i2c.h"
+#include "ff_osd.h"
 #endif
 }
 
 #define PIN_LED (25u)
 
 settings_t settings;
-video_mode_t video_mode;
 
 volatile bool start_core0 = false;
 
@@ -46,9 +45,6 @@ volatile bool core1_inactive = false;
 
 volatile bool restart_capture = false;
 volatile bool capture_active = false;
-
-// Video output active state flag
-video_out_type_t active_video_output = VIDEO_OUT_TYPE_DEF;
 
 void setup()
 {

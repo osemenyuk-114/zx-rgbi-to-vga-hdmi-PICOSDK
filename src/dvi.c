@@ -20,8 +20,8 @@ static int dma_ch0;
 static int dma_ch1;
 static uint offset;
 
-static video_mode_t video_mode;
-static int16_t h_visible_area;
+extern video_mode_t video_mode;
+extern int16_t h_visible_area;
 
 static uint32_t *v_out_dma_buf[2];
 
@@ -241,13 +241,9 @@ static void __not_in_flash_func(dma_handler_dvi)()
   }
 }
 
-void start_dvi(video_mode_t v_mode)
+void start_dvi()
 {
-  video_mode = v_mode;
-
   int whole_line = video_mode.whole_line * video_mode.div;
-
-  h_visible_area = video_mode.h_visible_area / (2 * video_mode.div);
 
   // initialization of constants
   const uint16_t b0 = 0b1101010100;

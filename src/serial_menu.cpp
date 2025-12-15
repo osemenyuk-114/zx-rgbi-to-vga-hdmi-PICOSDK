@@ -14,14 +14,14 @@
 extern "C"
 {
 #include "g_config.h"
-#ifdef OSD_FF_ENABLE
-#include "ff_osd_i2c.h"
-#include "ff_osd.h"
-#endif
 #include "v_buf.h"
 #include "settings.h"
 #include "rgb_capture.h"
 #include "video_output.h"
+
+#ifdef OSD_FF_ENABLE
+#include "ff_osd.h"
+#endif
 }
 
 // External variables that need to be accessed
@@ -115,8 +115,7 @@ void print_video_out_menu()
         break;
     }
 
-    printf("\n");
-    printf("  p   show configuration\n");
+    printf("\n  p   show configuration\n");
     printf("  h   show help (this menu)\n");
     printf("  q   exit to main menu\n\n");
 }
@@ -239,7 +238,8 @@ void print_ff_osd_menu()
     printf("  i   shift OSD UP\n");
     printf("  k   shift OSD DOWN\n");
     printf("  j   shift OSD LEFT\n");
-    printf("  l   shift OSD RIGHT\n\n");
+    printf("  l   shift OSD RIGHT\n");
+    printf("  r   toggle OSD rows (2/4)\n\n");
 
     printf("  p   show configuration\n");
     printf("  h   show help (this menu)\n");
@@ -255,9 +255,11 @@ void print_test_menu()
     printf("  2   draw welcome image (horizontal stripes)\n");
     printf("  3   draw \"NO SIGNAL\" screen\n");
     printf("  i   show captured frame count\n");
-    printf("  d   show I2C display data\n\n");
+#ifdef OSD_FF_ENABLE
+    printf("  g   show FlashFloppy OSD display data\n");
+#endif
 
-    printf("  p   show configuration\n");
+    printf("\n  p   show configuration\n");
     printf("  h   show help (this menu)\n");
     printf("  q   exit to main menu\n\n");
 }
@@ -453,31 +455,37 @@ void print_pin_inversion_mask()
 void print_ff_osd_config()
 {
     printf("  OSD horizontal offset ...... ");
-    printf("%d\n", ff_osd_config.h_off);
+    printf("%d\n", ff_osd_config.h_offset);
 
     printf("  OSD vertical offset ........ ");
-    printf("%d\n", ff_osd_config.v_off);
+    printf("%d\n", ff_osd_config.v_offset);
+
+    printf("  OSD rows ................... ");
+    printf("%d\n", ff_osd_config.rows);
 
     printf("  OSD minimum columns ........ ");
     printf("%d\n", ff_osd_config.min_cols);
 
     printf("  OSD maximum columns ........ ");
     printf("%d\n", ff_osd_config.max_cols);
-
-    printf("  OSD rows ................... ");
-    printf("%d\n", ff_osd_config.rows);
 }
 
 void print_ff_osd_h_offset()
 {
     printf("  OSD horizontal offset ...... ");
-    printf("%d\n", ff_osd_config.h_off);
+    printf("%d\n", ff_osd_config.h_offset);
 }
 
 void print_ff_osd_v_offset()
 {
     printf("  OSD vertical offset ........ ");
-    printf("%d\n", ff_osd_config.v_off);
+    printf("%d\n", ff_osd_config.v_offset);
+}
+
+void print_ff_osd_rows()
+{
+    printf("  OSD rows ................... ");
+    printf("%d\n", ff_osd_config.rows);
 }
 #endif
 
@@ -1191,11 +1199,6 @@ void handle_serial_menu()
                     print_test_menu();
                     break;
 
-                case 'i':
-                    printf("  Current frame count ......... ");
-                    printf("%d\n", frame_count);
-                    break;
-
                 case '1':
                 case '2':
                 case '3':
@@ -1218,6 +1221,35 @@ void handle_serial_menu()
 
                     break;
                 }
+
+                case 'i':
+                    printf("  Current frame count ......... ");
+                    printf("%d\n", frame_count);
+                    break;
+
+#ifdef OSD_FF_ENABLE
+                case 'g':
+                {
+                    printf("\n      * FF OSD Display Data *\n\n");
+                    printf("  Display on .................. %s\n", ff_osd_display.on ? "Yes" : "No");
+                    printf("  Rows ........................ %d\n", ff_osd_display.rows);
+                    printf("  Cols ........................ %d\n", ff_osd_display.cols);
+
+                    printf("\n  Text content:\n");
+                    for (int row = 0; row < ff_osd_display.rows && row < 4; row++)
+                    {
+                        printf("    Row %d: Height bits: %02x \"", row, (ff_osd_display.heights >> row) & 1);
+                        for (int col = 0; col < ff_osd_display.cols && col < 40; col++)
+                        {
+                            char c = ff_osd_display.text[row][col];
+                            printf("%c", (c >= 32 && c < 127) ? c : '.');
+                        }
+                        printf("\"\n");
+                    }
+                    printf("\n");
+                    break;
+                }
+#endif
 
                 default:
                     break;
@@ -1256,46 +1288,29 @@ void handle_serial_menu()
                     break;
 
                 case 'i':
-                    ff_osd_config.v_off++;
+                    ff_osd_config.v_offset = set_ff_osd_v_offset(ff_osd_config.v_offset + 1);
                     print_ff_osd_v_offset();
                     break;
 
                 case 'k':
-                    ff_osd_config.v_off--;
+                    ff_osd_config.v_offset = set_ff_osd_v_offset(ff_osd_config.v_offset - 1);
                     print_ff_osd_v_offset();
                     break;
 
                 case 'j':
-                    ff_osd_config.h_off--;
+                    ff_osd_config.h_offset = set_ff_osd_h_offset(ff_osd_config.h_offset - 1);
                     print_ff_osd_h_offset();
                     break;
 
                 case 'l':
-                    ff_osd_config.h_off++;
+                    ff_osd_config.h_offset = set_ff_osd_h_offset(ff_osd_config.h_offset + 1);
                     print_ff_osd_h_offset();
                     break;
 
-                case 'd':
-                {
-                    printf("\n      * I2C Display Data *\n\n");
-                    printf("  Display on: %s\n", i2c_display.on ? "Yes" : "No");
-                    printf("  Rows: %d\n", i2c_display.rows);
-                    printf("  Cols: %d\n", i2c_display.cols);
-
-                    printf("\n  Text content:\n");
-                    for (int row = 0; row < i2c_display.rows && row < 4; row++)
-                    {
-                        printf("    Row %d: Height bits: %02x \"", row, (i2c_display.heights >> row) & 1);
-                        for (int col = 0; col < i2c_display.cols && col < 40; col++)
-                        {
-                            char c = i2c_display.text[row][col];
-                            printf("%c", (c >= 32 && c < 127) ? c : '.');
-                        }
-                        printf("\"\n");
-                    }
-                    printf("\n");
+                case 'r':
+                    ff_osd_config.rows = (ff_osd_config.rows == 2) ? 4 : 2;
+                    print_ff_osd_rows();
                     break;
-                }
 
                 default:
                     break;

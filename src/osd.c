@@ -24,6 +24,8 @@ osd_state_t osd_state = {
     .text_updated = true};
 
 osd_mode_t osd_mode = {
+    .x = 0,
+    .y = 0,
     .start_x = 0,
     .end_x = OSD_WIDTH,
     .start_y = 0,
