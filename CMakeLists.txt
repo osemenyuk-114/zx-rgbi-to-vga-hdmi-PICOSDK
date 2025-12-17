@@ -36,8 +36,8 @@ pico_sdk_init()
 
 # Build options
 # These control which source files are compiled and which libraries are linked
-set(OSD_MENU_ENABLE 1)
-#set(OSD_FF_ENABLE 1)
+#set(OSD_MENU_ENABLE 1)
+set(OSD_FF_ENABLE 1)
 
 # Fetch external dependencies
 include(FetchContent)

@@ -48,11 +48,14 @@ void set_osd_position()
     break;
 
   default:
-    osd_mode.start_x = osd_mode.x;
+    osd_mode.start_x = osd_mode.x - 1;
     break;
   }
 
   osd_mode.end_x = osd_mode.start_x + osd_mode.width / 2;
+
+  if (osd_mode.end_x > h_visible_area)
+    osd_mode.end_x = h_visible_area;
 
   switch (osd_mode.y)
   {
@@ -61,11 +64,14 @@ void set_osd_position()
     break;
 
   default:
-    osd_mode.start_y = osd_mode.y;
+    osd_mode.start_y = osd_mode.y - 1;
     break;
   }
 
   osd_mode.end_y = osd_mode.start_y + osd_mode.height;
+
+  if (osd_mode.end_y > (video_mode.v_visible_area - 2 * v_margin) / video_mode.div)
+    osd_mode.end_y = (video_mode.v_visible_area - 2 * v_margin) / video_mode.div;
 }
 #endif
 
@@ -88,11 +94,11 @@ void start_video_output(video_out_type_t output_type)
   switch (output_type)
   {
   case DVI:
-    start_dvi(); //*(video_modes[settings.video_out_mode]));
+    start_dvi();
     break;
 
   case VGA:
-    start_vga(); //*(video_modes[settings.video_out_mode]));
+    start_vga();
     break;
 
   default:

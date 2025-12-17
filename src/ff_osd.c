@@ -65,7 +65,7 @@
 #include "osd.h"
 #include "video_output.h"
 
-/* Helper macros */
+// Helper macros
 #define min_t(type, x, y) \
     ({ type __x = (x); type __y = (y); __x < __y ? __x: __y; })
 
@@ -80,6 +80,8 @@
 #define MASK(r, x) ((x) & (ARRAY_SIZE(r) - 1))
 
 #define barrier() asm volatile("" ::: "memory")
+
+#define FW_VER "1.9"
 
 // Use GP16/17(I2C0), GP18/19 (I2C1), GP20/21 (I2C0), GP26/27 (I2C1) with full size Raspberry Pi Pico board.
 // Note: I2C0 passed to i2c_slave_init by default.
@@ -96,7 +98,7 @@ static const uint I2C_SLAVE_SCL_PIN = 27;
 // 100 kHz: I2C Standard Mode, matching flashfloppy setting
 #define I2C_BAUDRATE 100000
 
-/* PCF8574 pin assignment: D7-D6-D5-D4-BL-EN-RW-RS */
+// PCF8574 pin assignment: D7-D6-D5-D4-BL-EN-RW-RS
 #define _D7 (1u << 7)
 #define _D6 (1u << 6)
 #define _D5 (1u << 5)
@@ -106,39 +108,67 @@ static const uint I2C_SLAVE_SCL_PIN = 27;
 #define _RW (1u << 1)
 #define _RS (1u << 0)
 
-/* FF OSD command set */
-#define FF_OSD_BACKLIGHT 0x00 /* [0] = backlight on */
-#define FF_OSD_DATA 0x02      /* next columns*rows bytes are text data */
-#define FF_OSD_ROWS 0x10      /* [3:0] = #rows */
-#define FF_OSD_HEIGHTS 0x20   /* [3:0] = 1 iff row is 2x height */
-#define FF_OSD_BUTTONS 0x30   /* [3:0] = button mask */
-#define FF_OSD_COLUMNS 0x40   /* [6:0] = #columns */
+// FF OSD command set
+#define FF_OSD_BACKLIGHT 0x00 // [0] = backlight on
+#define FF_OSD_DATA 0x02      // next columns*rows bytes are text data
+#define FF_OSD_ROWS 0x10      // [3:0] = #rows
+#define FF_OSD_HEIGHTS 0x20   // [3:0] = 1 iff row is 2x height
+#define FF_OSD_BUTTONS 0x30   // [3:0] = button mask
+#define FF_OSD_COLUMNS 0x40   // [6:0] = #columns
 
-/* Current position in FF OSD I2C Protocol character data. */
+// Button codes
+#define B_LEFT 1
+#define B_RIGHT 2
+#define B_SELECT 4
+#define B_PROCESSED 8
+
+const char fw_ver[] = FW_VER;
+
+bool config_active;
+
+static enum {
+    C_idle = 0,
+    C_banner,
+    // Output
+    C_h_offset,
+    C_v_offset,
+    // LCD
+    C_rows,
+    C_min_cols,
+    C_max_cols,
+    // Exit
+    C_save,
+    C_max
+} config_state;
+
+// Current position in FF OSD I2C Protocol character data.
 static uint8_t ff_osd_x, ff_osd_y;
 
-// I2C data ring. */
+// I2C data ring
 static uint8_t d_ring[1024];
 static uint16_t d_cons, d_prod; // data ring buffer consumer / producer pointers
-/* Transaction ring: Data-ring offset of each transaction start. */
+// Transaction ring: Data-ring offset of each transaction start
 static uint16_t t_ring[8];
 static uint16_t t_cons, t_prod; // transactions ring buffer consumer / producer pointers
-/* Display state, exported to display routines. */
+// Display state, exported to display routines
 ff_osd_display_t ff_osd_display = {
     .rows = 4,
     .cols = 20,
     .on = false,
     .text = {},
 };
-/* LCD state. */
+// LCD state
 static bool lcd_inc;
 static uint8_t lcd_ddraddr;
-/* I2C custom protocol state. */
-bool ff_osd_i2c_protocol; /* using the custom protocol? */
 
-uint8_t ff_osd_buttons_rx; /* button state: Gotek -> OSD */
+// I2C custom protocol state
+bool ff_osd_i2c_protocol; // using the custom protocol?
 
-/* state: OSD -> Gotek */
+uint8_t ff_osd_buttons_rx; // button state: Gotek -> OSD
+
+static uint16_t display_height;
+
+// state: OSD -> Gotek
 ff_osd_info_t ff_osd_info = {
     .protocol_ver = 0,
     .fw_major = '1',
@@ -165,25 +195,25 @@ static void __not_in_flash_func(ff_osd_process)(void)
 
     d_c = d_cons;
     d_p = d_prod;
-    barrier(); /* Get data ring producer /then/ transaction ring producer */
+    barrier(); // Get data ring producer /then/ transaction ring producer
     t_c = t_cons;
     t_p = t_prod;
 
-    /* We only care about the last full transaction, and newer. */
+    // We only care about the last full transaction, and newer.
     if ((uint16_t)(t_p - t_c) >= 2)
     {
-        /* Discard older transactions, and in-progress old transaction. */
+        // Discard older transactions, and in-progress old transaction.
         t_c = t_p - 2;
         d_c = t_ring[MASK(t_ring, t_c)];
         ff_osd_y = 0;
     }
 
-    /* Data ring should not be more than half full. We don't want it to
-     * overrun during the processing loop below: That should be impossible
-     * with half a ring free. */
+    // Data ring should not be more than half full. We don't want it to
+    // overrun during the processing loop below: That should be impossible
+    // with half a ring free.
     // assert((uint16_t)(d_p - d_c) < (ARRAY_SIZE(d_ring)/2));
 
-    /* Process the command sequence. */
+    // Process the command sequence.
     for (; d_c != d_p; d_c++)
     {
         uint8_t x = d_ring[MASK(d_ring, d_c)];
@@ -196,7 +226,7 @@ static void __not_in_flash_func(ff_osd_process)(void)
 
         if (ff_osd_y != 0)
         {
-            /* Character Data. */
+            // Character Data.
             ff_osd_display.text[ff_osd_y - 1][ff_osd_x] = x;
 
             if (++ff_osd_x >= ff_osd_display.cols)
@@ -209,10 +239,10 @@ static void __not_in_flash_func(ff_osd_process)(void)
         }
         else
         {
-            /* Command. */
+            // Command.
             if ((x & 0xc0) == FF_OSD_COLUMNS)
             {
-                /* 0-40 */
+                // 0-40
                 ff_osd_display.cols = min_t(uint16_t, 40, x & 0x3f);
             }
             else
@@ -224,7 +254,7 @@ static void __not_in_flash_func(ff_osd_process)(void)
                     break;
 
                 case FF_OSD_ROWS:
-                    /* 0-3 */
+                    // 0-3
                     ff_osd_display.rows = x & 0x03;
                     break;
 
@@ -273,31 +303,31 @@ static void __not_in_flash_func(lcd_process_cmd)(uint8_t cmd)
 
     switch (c)
     {
-    case 0: /* Set DDR Address */
+    case 0: // Set DDR Address
         lcd_ddraddr = cmd & 127;
         break;
 
-    case 1: /* Set CGR Address */
+    case 1: // Set CGR Address
         break;
 
-    case 2: /* Function Set */
+    case 2: // Function Set
         break;
 
-    case 3: /* Cursor or Display Shift */
+    case 3: // Cursor or Display Shift
         break;
 
-    case 4: /* Display On/Off Control */
+    case 4: // Display On/Off Control
         break;
 
-    case 5: /* Entry Mode Set */
+    case 5: // Entry Mode Set
         lcd_inc = (cmd & 2) != 0;
         break;
 
-    case 6: /* Return Home */
+    case 6: // Return Home
         lcd_ddraddr = 0;
         break;
 
-    case 7: /* Clear Display */
+    case 7: // Clear Display
         memset(ff_osd_display.text, ' ', sizeof(ff_osd_display.text));
         lcd_ddraddr = 0;
         break;
@@ -308,10 +338,10 @@ static void __not_in_flash_func(lcd_process_dat)(uint8_t dat)
 {
     int x, y;
     if (lcd_ddraddr >= 0x68)
-        lcd_ddraddr = 0x00; /* jump to line 2 */
+        lcd_ddraddr = 0x00; // jump to line 2
 
     if ((lcd_ddraddr >= 0x28) && (lcd_ddraddr < 0x40))
-        lcd_ddraddr = 0x40; /* jump to line 1 */
+        lcd_ddraddr = 0x40; // jump to line 1
 
     x = lcd_ddraddr & 0x3f;
     y = lcd_ddraddr >> 6;
@@ -335,7 +365,7 @@ static void __not_in_flash_func(lcd_process)(void)
     static uint16_t dat = 1;
     static bool rs;
 
-    /* Process the command sequence. */
+    // Process the command sequence.
     for (d_c = d_cons; d_c != d_p; d_c++)
     {
         uint8_t x = d_ring[MASK(d_ring, d_c)];
@@ -375,7 +405,7 @@ void __not_in_flash_func(i2c_slave_handler)(i2c_inst_t *i2c, i2c_slave_event_t e
     switch (event)
     {
     case I2C_SLAVE_RECEIVE: // master has written some data
-        /* On address match (first RECEIVE after FINISH), mark transaction start */
+        // On address match (first RECEIVE after FINISH), mark transaction start
         if (!addr_matched)
         {
             t_ring[MASK(t_ring, t_prod++)] = d_prod;
@@ -383,25 +413,25 @@ void __not_in_flash_func(i2c_slave_handler)(i2c_inst_t *i2c, i2c_slave_event_t e
             addr_matched = true;
         }
 
-        /* Read incoming byte - ISR is called for each byte received */
+        // Read incoming byte - ISR is called for each byte received
         d_ring[MASK(d_ring, d_prod++)] = i2c_read_byte_raw(i2c);
         break;
 
     case I2C_SLAVE_REQUEST: // master is requesting data
-        /* On address match for read operation, just reset read position */
+        // On address match for read operation, just reset read position
         if (!addr_matched)
         {
             rp = 0;
             addr_matched = true;
         }
 
-        /* Send response byte - ISR is called for each byte requested */
+        // Send response byte - ISR is called for each byte requested
         uint8_t *info = (uint8_t *)&ff_osd_info;
         i2c_write_byte_raw(i2c, (rp < sizeof(ff_osd_info)) ? info[rp++] : 0);
         break;
 
     case I2C_SLAVE_FINISH: // master has signalled Stop / Restart
-        /* Transaction complete - reset for next transaction */
+        // Transaction complete - reset for next transaction
         addr_matched = false;
         break;
 
@@ -417,9 +447,9 @@ void ff_osd_i2c_process(void)
 
 void ff_osd_i2c_init()
 {
-    ff_osd_i2c_protocol = true;
+    ff_osd_i2c_protocol = false;
 
-    /* Initialize GPIO pins for I2C */
+    // Initialize GPIO pins for I2C
     gpio_init(I2C_SLAVE_SDA_PIN);
     gpio_set_function(I2C_SLAVE_SDA_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SLAVE_SDA_PIN);
@@ -428,10 +458,10 @@ void ff_osd_i2c_init()
     gpio_set_function(I2C_SLAVE_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SLAVE_SCL_PIN);
 
-    /* Initialize I2C peripheral at 100kHz */
+    // Initialize I2C peripheral at 100kHz
     i2c_init(I2C_PERIPH, I2C_BAUDRATE);
 
-    /* Initialize I2C slave mode with our address and handler */
+    // Initialize I2C slave mode with our address and handler
     uint8_t slave_addr = ff_osd_i2c_protocol ? 0x10 : 0x27;
     i2c_slave_init(I2C_PERIPH, slave_addr, &i2c_slave_handler);
 }
@@ -450,6 +480,8 @@ const static ff_osd_config_t default_ff_osd_config = {
 };
 
 ff_osd_config_t ff_osd_config = {
+    .h_offset = 1,
+    .v_offset = 1,
     .min_cols = 16,
     .max_cols = 40,
     .rows = 4,
@@ -475,23 +507,26 @@ void ff_osd_update()
         osd_mode.x = ff_osd_config.h_offset;
         osd_mode.y = ff_osd_config.v_offset;
         osd_mode.columns = ff_osd_display.cols;
-        osd_mode.rows = 4;
+        osd_mode.rows = 8;
         osd_mode.width = osd_mode.columns * OSD_FONT_WIDTH;
         osd_mode.height = osd_mode.rows * OSD_FONT_HEIGHT;
         osd_mode.buffer_size = osd_mode.width * osd_mode.height / 2;
 
         set_osd_position();
 
+        // osd_text_printf(2, 0, OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0, "I2C Buttons: %02x", ff_osd_buttons_rx);
+
+        ff_osd_config_process(ff_osd_buttons_rx);
+
         /*
             // Show debug info about the I2C display state
             char debug[40];
             snprintf(debug, sizeof(debug), "I2C: on=%d r=%d c=%d h=%02x",
                      ff_osd_display.on, ff_osd_display.rows, ff_osd_display.cols, ff_osd_display.heights);
-            osd_text_print(0, 0, debug, OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0);
-        // osd_text_printf(1, 0, OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0, "I2C Buttons: %02x", ff_osd_buttons_rx);
+            osd_text_print(2, 0, debug, OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0);
         */
 
-        uint8_t start_row = 0;
+        uint8_t start_row = 4;
 
         // Render each row from ff_osd_display
         for (uint8_t row = 0; (row < ff_osd_display.rows) && (row < 4); row++)
@@ -544,12 +579,62 @@ void ff_osd_update()
     osd_state.visible = ff_osd_display.on;
 }
 
-#if 0
-void ff_osd_config_process(uint8_t b, bool autosync_changed)
+// Called before erasing Flash, to temporarily disable the display.
+// Flash updates can stall instruction fetch and mess up the OSD.
+void display_off(void)
 {
+    display_height = 0; // Display off
+    sleep_ms(50);       // Wait for a few hlines (we only really need one)
+}
+
+static struct repeat
+{
+    int repeat;
+    uint32_t prev;
+} left, right;
+
+uint8_t button_repeat(uint8_t pb, uint8_t b, uint8_t m, struct repeat *r)
+{
+    if (pb & m)
+    {
+        // Is this button held down?
+        if (b & m)
+        {
+            uint32_t delta = r->repeat ? 100000 : 500000;
+            if (time_us_32() - r->prev > delta)
+            {
+                // Repeat this button now.
+                r->repeat++;
+            }
+            else
+            {
+                // Not ready to repeat this button.
+                b &= ~m;
+            }
+        }
+        else
+        {
+            // Button not pressed. Reset repeat count.
+            r->repeat = 0;
+        }
+    }
+    if (b & m)
+    {
+        // Remember when we actioned this button press/repeat.
+        r->prev = time_us_32();
+    }
+    return b;
+}
+
+void ff_osd_config_process(uint8_t b)
+{
+    const uint8_t fg_color = OSD_COLOR_DIMMED;
+    const uint8_t bg_color = OSD_COLOR_BACKGROUND;
+
     uint8_t _b;
     static uint8_t pb;
     bool changed = false;
+
     static enum {
         C_SAVE = 0,
         C_SAVEREBOOT,
@@ -558,6 +643,7 @@ void ff_osd_config_process(uint8_t b, bool autosync_changed)
         C_RESET,
         C_NC_MAX,
     } new_config;
+
     static ff_osd_config_t old_config;
 
     _b = b;
@@ -566,62 +652,51 @@ void ff_osd_config_process(uint8_t b, bool autosync_changed)
     b = button_repeat(pb, b, B_RIGHT, &right);
     pb = _b;
 
-    if (usart1->sr & USART_SR_RXNE)
-    {
-        char c = usart1->dr;
-        switch (tolower(c))
-        {
-        case ' ':
-            b |= B_SELECT;
-            break;
-        case 'p':
-            b |= B_RIGHT;
-            break;
-        case 'o':
-            b |= B_LEFT;
-            break;
-        }
-    }
-
     if (b & B_SELECT)
     {
         if (++config_state >= C_max)
         {
             config_state = C_idle;
-            display_offset();
+
+            display_off();
+
             switch (new_config)
             {
             case C_SAVE:
-                config_write_flash(&config);
+                // config_write_flash(&ff_osd_config);
                 break;
+
             case C_SAVEREBOOT:
-                config_write_flash(&config);
+                // config_write_flash(&ff_osd_config);
                 while (1)
                 {
                 } /* hang and let WDT reboot */
                 break;
+
             case C_USE:
                 break;
+
             case C_DISCARD:
-                config = old_config;
+                ff_osd_config = old_config;
                 break;
+
             case C_RESET:
-                config = dfl_config;
-                config_write_flash(&config);
+                ff_osd_config = default_ff_osd_config;
+                // config_write_flash(&ff_osd_config);
                 while (1)
                 {
-                } /* hang and let WDT reboot */
+                } // hang and let WDT reboot
                 break;
+
             case C_NC_MAX:
                 break;
             }
-            printk("\n");
-            config_printk(&config);
+
             lcd_display_update();
         }
         if ((config_state == C_rows) && ff_osd_i2c_protocol)
         {
-            /* Skip LCD config options if using the extended OSD protocol. */
+            // Skip LCD config options if using the extended OSD protocol.
             config_state = C_save;
         }
         config_active = (config_state != C_idle);
@@ -630,174 +705,103 @@ void ff_osd_config_process(uint8_t b, bool autosync_changed)
 
     switch (config_state)
     {
-    default:
-        break;
     case C_banner:
         if (changed)
         {
-            cnf_prt(0, "FF OSD v%s", fw_ver);
-            cnf_prt(1, "Flash Config");
-            old_config = config;
+            osd_text_printf(2, 0, fg_color, bg_color, 0, "FF OSD v%s", fw_ver);
+            osd_text_print(3, 0, "Flash Config", fg_color, bg_color, 0);
+            old_config = ff_osd_config;
         }
         break;
-    case C_polarity:
-        if (changed)
-            cnf_prt(0, "Sync Polarity:");
-        if (b & B_LEFT)
-        {
-            if (config.polarity > 0)
-                --config.polarity;
-            else
-                config.polarity = SYNC_MAX - 1;
-        }
-        if (b & B_RIGHT)
-        {
-            if (++config.polarity >= SYNC_MAX)
-                config.polarity = 0;
-        }
-        if (b & (B_LEFT | B_RIGHT))
-        {
-            if (config.polarity != SYNC_AUTO)
-                running_polarity = config.polarity;
-        }
-        if (b || autosync_changed)
-        {
-            if (config.polarity == SYNC_AUTO)
-                cnf_prt(1, "%s (%s)", polarity_pretty[config.polarity],
-                        polarity_pretty[running_polarity]);
-            else
-                cnf_prt(1, "%s", polarity_pretty[config.polarity]);
-        }
-        break;
-    case C_disptiming:
-        if (changed)
-            cnf_prt(0, "Pixel Timing:");
-        if (b & B_LEFT)
-        {
-            if (config.display_timing > 0)
-                --config.display_timing;
-            else
-                config.display_timing = DISP_MAX - 1;
-        }
-        if (b & B_RIGHT)
-        {
-            if (++config.display_timing >= DISP_MAX)
-                config.display_timing = 0;
-        }
-        if (b & (B_LEFT | B_RIGHT))
-        {
-            if (config.display_timing != DISP_AUTO)
-                setup_spi(config.display_timing);
-        }
-        if (b || autosync_changed)
-        {
-            if (config.display_timing == DISP_AUTO)
-                cnf_prt(1, "%s (%s)", timing_pretty[config.display_timing],
-                        timing_pretty[running_display_timing]);
-            else
-                cnf_prt(1, "%s", timing_pretty[config.display_timing]);
-        }
-        break;
-    case C_disp2Y:
-        if (changed)
-            cnf_prt(0, "Display Height:");
-        if (b & (B_LEFT | B_RIGHT))
-        {
-            config.display_2Y ^= 1;
-        }
-        if (b)
-            cnf_prt(1, "%s", config.display_2Y ? "Double" : "Normal");
-        break;
-    case C_spibus:
-        if (changed)
-            cnf_prt(0, "Display Output:");
-        if (b & (B_LEFT | B_RIGHT))
-        {
-            config.display_spi ^= 1;
-        }
-        if (b)
-            cnf_prt(1, "%s", config.display_spi ? "PA7/SPI1" : "PB15/SPI2");
-        break;
-    case C_dispen:
-        if (changed)
-            cnf_prt(0, "Display Enable:");
-        if (b & B_LEFT)
-        {
-            if (config.dispctl_mode > 0)
-                --config.dispctl_mode;
-            else
-                config.dispctl_mode = DISPCTL_MAX - 1;
-        }
-        if (b & B_RIGHT)
-            if (++config.dispctl_mode >= DISPCTL_MAX)
-                config.dispctl_mode = 0;
-        if (b)
-            cnf_prt(1, "%s", dispen_pretty[config.dispctl_mode]);
-        break;
+
     case C_h_offset:
         if (changed)
-            cnf_prt(0, "H.Off (1-199):");
+            osd_text_print(2, 0, "H.Off (1-199):", fg_color, bg_color, 0);
+
         if (b & B_LEFT)
-            config.h_offset = max_t(uint16_t, config.h_offset - 1, 1);
+            ff_osd_config.h_offset = max_t(uint16_t, ff_osd_config.h_offset - 1, 1);
+
         if (b & B_RIGHT)
-            config.h_offset = min_t(uint16_t, config.h_offset + 1, 199);
+            ff_osd_config.h_offset = min_t(uint16_t, ff_osd_config.h_offset + 1, 199);
+
         if (b)
-            cnf_prt(1, "%u", config.h_offset);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%u", ff_osd_config.h_offset);
+
         break;
+
     case C_v_offset:
         if (changed)
-            cnf_prt(0, "V.Off (2-299):");
+            osd_text_print(2, 0, "V.Off (2-299):", fg_color, bg_color, 0);
+
         if (b & B_LEFT)
-            config.v_offset = max_t(uint16_t, config.v_offset - 1, 2);
+            ff_osd_config.v_offset = max_t(uint16_t, ff_osd_config.v_offset - 1, 2);
+
         if (b & B_RIGHT)
-            config.v_offset = min_t(uint16_t, config.v_offset + 1, 299);
+            ff_osd_config.v_offset = min_t(uint16_t, ff_osd_config.v_offset + 1, 299);
+
         if (b)
-            cnf_prt(1, "%u", config.v_offset);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%u", ff_osd_config.v_offset);
         break;
+
     case C_rows:
         if (changed)
-            cnf_prt(0, "Rows (2 or 4):");
+            osd_text_print(2, 0, "Rows (2 or 4):", fg_color, bg_color, 0);
+
         if (b & (B_LEFT | B_RIGHT))
-            config.rows = (config.rows == 2) ? 4 : 2;
+            ff_osd_config.rows = (ff_osd_config.rows == 2) ? 4 : 2;
+
         if (b)
-            cnf_prt(1, "%u", config.rows);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%u", ff_osd_config.rows);
         break;
+
     case C_min_cols:
         if (changed)
-            cnf_prt(0, "Min.Col (1-%u):", 80 / config.rows);
+            osd_text_printf(2, 0, fg_color, bg_color, 0, "Min.Col (1-%u):", 80 / ff_osd_config.rows);
+
         if (b & B_LEFT)
-            config.min_cols--;
+            ff_osd_config.min_cols--;
+
         if (b & B_RIGHT)
-            config.min_cols++;
-        config.min_cols = min_t(uint16_t, max_t(uint16_t, config.min_cols, 1),
-                                80 / config.rows);
+            ff_osd_config.min_cols++;
+
+        ff_osd_config.min_cols = min_t(uint16_t, max_t(uint16_t, ff_osd_config.min_cols, 1), 80 / ff_osd_config.rows);
+
         if (b)
-            cnf_prt(1, "%u", config.min_cols);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%u", ff_osd_config.min_cols);
         break;
+
     case C_max_cols:
         if (changed)
-            cnf_prt(0, "Max.Col (%u-%u):", config.min_cols, 80 / config.rows);
+            osd_text_printf(2, 0, fg_color, bg_color, 0, "Max.Col (%u-%u):", ff_osd_config.min_cols, 80 / ff_osd_config.rows);
+
         if (b & B_LEFT)
-            config.max_cols--;
+            ff_osd_config.max_cols--;
+
         if (b & B_RIGHT)
-            config.max_cols++;
-        config.max_cols = min_t(uint16_t, max_t(uint16_t, config.max_cols, config.min_cols),
-                                80 / config.rows);
+            ff_osd_config.max_cols++;
+
+        ff_osd_config.max_cols = min_t(uint16_t, max_t(uint16_t, ff_osd_config.max_cols, ff_osd_config.min_cols), 80 / ff_osd_config.rows);
+
         if (b)
-            cnf_prt(1, "%u", config.max_cols);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%u", ff_osd_config.max_cols);
         break;
+
     case C_save:
     {
-        const static char *str[] = {"Save", "Save+Reset", "Use",
-                                    "Discard", "Factory Reset"};
+        const static char *str[] = {
+            "Save",
+            "Save+Reset",
+            "Use",
+            "Discard",
+            "Factory Reset",
+        };
+
         if (changed)
         {
-            cnf_prt(0, "Save New Config?");
-            if ((old_config.display_spi == config.display_spi) && (old_config.dispctl_mode == config.dispctl_mode))
-                new_config = C_SAVE;
-            else
-                new_config = C_SAVEREBOOT;
+            osd_text_print(2, 0, "Save New config?", fg_color, bg_color, 0);
+            new_config = C_SAVE;
         }
+
         if (b & B_LEFT)
         {
             if (new_config > 0)
@@ -805,13 +809,17 @@ void ff_osd_config_process(uint8_t b, bool autosync_changed)
             else
                 new_config = C_NC_MAX - 1;
         }
+
         if (b & B_RIGHT)
             if (++new_config >= C_NC_MAX)
                 new_config = 0;
+
         if (b)
-            cnf_prt(1, "%s", str[new_config]);
+            osd_text_printf(3, 0, fg_color, bg_color, 0, "%s", str[new_config]);
         break;
     }
+
+    default:
+        break;
     }
 }
-#endif
