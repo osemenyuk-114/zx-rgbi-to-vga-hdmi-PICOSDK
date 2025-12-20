@@ -1,15 +1,5 @@
 #pragma once
 
-#define FF_OSD_BUTTON_LEFT 1
-#define FF_OSD_BUTTON_RIGHT 2
-#define FF_OSD_BUTTON_SELECT 4
-
-#define FF_OSD_H_OFFSET_MIN 1
-#define FF_OSD_H_OFFSET_MAX 199
-#define FF_OSD_V_OFFSET_MIN 2
-#define FF_OSD_V_OFFSET_MAX 299
-
-// Structure definitions
 typedef struct ff_osd_config_t
 {
     uint16_t h_offset;
@@ -28,7 +18,7 @@ typedef struct ff_osd_display_t
     bool on;
 } ff_osd_display_t;
 
-typedef struct ff_osd_info_t
+typedef struct __attribute__((packed)) ff_osd_info_t
 {
     uint8_t protocol_ver;
     uint8_t fw_major, fw_minor;

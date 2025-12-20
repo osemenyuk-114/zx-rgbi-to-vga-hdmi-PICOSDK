@@ -20,6 +20,7 @@ extern "C"
 #include "video_output.h"
 
 #ifdef OSD_FF_ENABLE
+#include "osd.h"
 #include "ff_osd.h"
 #endif
 }
@@ -1277,6 +1278,21 @@ void handle_serial_menu()
                 if (inchar != 'h')
                     inchar = get_menu_input(10);
 
+                osd_clear_text_buffer();
+                osd_text_print_centered(0, "* FlashFloppy OSD Configuration *", 7, 0, 1);
+                osd_render_text_to_buffer();
+
+                osd_mode.x = ff_osd_config.h_offset;
+                osd_mode.y = ff_osd_config.v_offset;
+                osd_mode.columns = ff_osd_display.cols;
+                osd_mode.rows = ff_osd_config.rows;
+                osd_mode.width = osd_mode.columns * OSD_FONT_WIDTH;
+                osd_mode.height = osd_mode.rows * OSD_FONT_HEIGHT;
+                osd_mode.buffer_size = osd_mode.width * osd_mode.height / 2;
+
+                set_osd_position();
+                osd_state.visible = true; // enable OSD display for configuration
+
                 switch (inchar)
                 {
                 case 'p':
@@ -1318,6 +1334,7 @@ void handle_serial_menu()
 
                 if (inchar == 'q')
                 {
+                    osd_state.visible = false; // restore OSD state
                     inchar = 'h';
                     break;
                 }

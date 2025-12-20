@@ -12,11 +12,6 @@
 #include "settings.h"
 #include "video_output.h"
 
-// Debounce timing - increased for slower navigation
-#define DEBOUNCE_TIME_US 250000 // 250ms debounce (slower cursor movement)
-#define REPEAT_DELAY_US 500000  // 500ms initial repeat delay
-#define REPEAT_RATE_US 100000   // 100ms repeat rate
-
 // Pin inversion mask bit positions for menu items
 // Bit mapping: F(6), SSI(4), KSI(5), I(3), R(2), G(1), B(0)
 static const uint8_t mask_bit_positions[] = {6, 4, 5, 3, 2, 1, 0};
@@ -29,14 +24,12 @@ osd_menu_state_t osd_menu_state = {
     .selected_item = 0,
     .tuning_mode = false};
 
-osd_buttons_t osd_buttons = {0};
 osd_menu_nav_t osd_menu = {0};
 
 void osd_menu_init()
 {
     // Initialize menu-specific state
     memset(&osd_menu_state, 0, sizeof(osd_menu_state));
-    memset(&osd_buttons, 0, sizeof(osd_buttons));
     memset(&osd_menu, 0, sizeof(osd_menu));
 
     // Initialize menu navigation
@@ -46,9 +39,6 @@ void osd_menu_init()
     osd_menu_state.selected_item = 0;
     osd_menu_state.tuning_mode = false;
     osd_menu_state.mask_bit_position = 0;
-
-    // Initialize buttons
-    osd_buttons_init();
 }
 
 void osd_menu_update()
@@ -462,142 +452,6 @@ void osd_menu_toggle()
         osd_hide();
     else
         osd_show();
-}
-
-void osd_buttons_init()
-{
-    // Configure button pins as inputs with pull-up
-    gpio_init(OSD_BTN_UP);
-    gpio_set_dir(OSD_BTN_UP, GPIO_IN);
-    gpio_pull_up(OSD_BTN_UP);
-
-    gpio_init(OSD_BTN_DOWN);
-    gpio_set_dir(OSD_BTN_DOWN, GPIO_IN);
-    gpio_pull_up(OSD_BTN_DOWN);
-
-    gpio_init(OSD_BTN_SEL);
-    gpio_set_dir(OSD_BTN_SEL, GPIO_IN);
-    gpio_pull_up(OSD_BTN_SEL);
-
-    // Initialize timing
-    uint64_t current_time = time_us_64();
-
-    for (int i = 0; i < 3; i++)
-        osd_buttons.last_press_time[i] = current_time;
-
-    osd_buttons.sel_long_press_triggered = false;
-
-    // Initialize menu timeout tracking
-    osd_state.last_activity_time = current_time;
-    osd_state.show_time = current_time;
-}
-
-void osd_buttons_update()
-{
-    if (!osd_state.enabled)
-        return;
-
-    uint32_t current_time = time_us_32();
-
-    // Read button states (buttons are active LOW with pull-up)
-    bool button_states[3] = {
-        !gpio_get(OSD_BTN_UP),
-        !gpio_get(OSD_BTN_DOWN),
-        !gpio_get(OSD_BTN_SEL)};
-
-    bool *button_pressed[3] = {
-        &osd_buttons.up_pressed,
-        &osd_buttons.down_pressed,
-        &osd_buttons.sel_pressed};
-
-    // Update each button with repeat functionality
-    for (int i = 0; i < 3; i++)
-    {
-        if (button_states[i])
-        { // Button is currently pressed
-            if (!osd_buttons.key_held[i])
-            { // First press detection
-                if (current_time - osd_buttons.last_press_time[i] > DEBOUNCE_TIME_US)
-                {
-                    *button_pressed[i] = true;
-                    osd_buttons.key_held[i] = true;
-                    osd_buttons.key_hold_start[i] = current_time;
-                    osd_buttons.last_repeat_time[i] = current_time;
-                    osd_buttons.last_press_time[i] = current_time;
-                    // Reset long press trigger on new SEL press
-                    if (i == 2)
-                        osd_buttons.sel_long_press_triggered = false;
-                }
-            }
-            else
-            { // Key is held - check for repeat
-                uint32_t hold_duration = current_time - osd_buttons.key_hold_start[i];
-                // Check for SEL button long press (>5 seconds)
-                if (i == 2 && hold_duration > 5000000 && !osd_buttons.sel_long_press_triggered)
-                { // Trigger video output type toggle
-                    osd_buttons.sel_long_press_triggered = true;
-                    // Toggle video output type
-                    video_out_type_t new_type = (settings.video_out_type == DVI) ? VGA : DVI;
-                    settings.video_out_type = new_type;
-                    settings.video_out_mode = VIDEO_OUT_MODE_DEF;
-
-                    // Switch video output if different from current
-                    if (active_video_output != settings.video_out_type)
-                    {
-                        stop_video_output();
-                        start_video_output(settings.video_out_type);
-                        // Adjust capture frequency for new system clock
-                        set_capture_frequency(settings.frequency);
-                    }
-
-                    // Force menu redraw to show new output type
-                    if (osd_state.visible)
-                        osd_state.needs_redraw = true;
-                    // Don't process normal SEL press after long press
-                    osd_buttons.sel_pressed = false;
-                    continue;
-                }
-
-                uint32_t since_last_repeat = current_time - osd_buttons.last_repeat_time[i];
-                // Initial repeat delay, then accelerating repeat rate
-                uint32_t repeat_delay;
-
-                if (hold_duration < REPEAT_DELAY_US)
-                    repeat_delay = REPEAT_DELAY_US; // Initial delay
-                else
-                    repeat_delay = REPEAT_RATE_US; // Faster repeat
-
-                if (since_last_repeat > repeat_delay)
-                {
-                    *button_pressed[i] = true;
-                    osd_buttons.last_repeat_time[i] = current_time;
-                }
-            }
-        }
-        else
-        { // Button released
-            *button_pressed[i] = false;
-            osd_buttons.key_held[i] = false;
-        }
-    }
-}
-
-bool osd_button_pressed(uint8_t button)
-{
-    switch (button)
-    {
-    case 0:
-        return osd_buttons.up_pressed;
-
-    case 1:
-        return osd_buttons.down_pressed;
-
-    case 2:
-        return osd_buttons.sel_pressed;
-
-    default:
-        return false;
-    }
 }
 
 // Menu rendering functions
