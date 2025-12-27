@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "inttypes.h"
-#include "stdbool.h"
+#include <inttypes.h>
+#include <stdbool.h>
 
 #include "pico.h"
 #include "pico/time.h"
