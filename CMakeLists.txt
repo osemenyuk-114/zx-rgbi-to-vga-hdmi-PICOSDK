@@ -34,6 +34,11 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# Build options
+# These control which source files are compiled and which libraries are linked
+# enable OSD menu
+set(OSD_MENU_ENABLE 1)
+
 # Add executable
 add_executable(${EXECUTABLE_NAME})
 
@@ -42,7 +47,6 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.c
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
@@ -50,6 +54,13 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video_output.c
 )
+
+# Conditionally add OSD menu source files
+if(DEFINED OSD_MENU_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c
+    )
+endif()
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/src/programs.pio
@@ -78,9 +89,19 @@ target_compile_options(${EXECUTABLE_NAME} PRIVATE
     -O3 
 )
 
+# Add compile definitions for OSD features
+if(DEFINED OSD_MENU_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_MENU_ENABLE)
+endif()
+
 # Add linker flag to print memory usage
 target_link_options(${EXECUTABLE_NAME} PRIVATE
     -Wl,--print-memory-usage
 )
 
 pico_add_extra_outputs(${EXECUTABLE_NAME})
+
+# Extend the clean target to remove all object files (*.dir subdirectories only)
+set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES
+    "${CMAKE_BINARY_DIR}/CMakeFiles/${EXECUTABLE_NAME}.dir"
+)
