@@ -41,10 +41,10 @@ target_sources(
     ${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp 
+    ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.cpp 
+    ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.c
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/v_buf.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 

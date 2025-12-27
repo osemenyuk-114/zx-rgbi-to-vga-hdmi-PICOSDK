@@ -1,24 +1,14 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include "pico/stdio.h"
-
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
 #include "hardware/watchdog.h"
 
-#include "serial_menu.h"
-
-extern "C"
-{
 #include "g_config.h"
-#include "v_buf.h"
-#include "settings.h"
+#include "serial_menu.h"
 #include "rgb_capture.h"
+#include "settings.h"
+#include "v_buf.h"
 #include "video_output.h"
-}
 
 // External variables that need to be accessed
 extern settings_t settings;
