@@ -98,8 +98,7 @@ void print_video_out_menu()
         break;
     }
 
-    printf("\n");
-    printf("  p   show configuration\n");
+    printf("\n  p   show configuration\n");
     printf("  h   show help (this menu)\n");
     printf("  q   exit to main menu\n\n");
 }
