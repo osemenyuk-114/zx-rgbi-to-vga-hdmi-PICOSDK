@@ -9,7 +9,11 @@
 #include "pico.h"
 #include "pico/time.h"
 
-#define FW_VERSION "v1.6.0-PICO-SDK"
+// FW_VERSION can be overridden at build time via -DFW_VERSION="..."
+#ifndef FW_VERSION
+#define FW_VERSION "v1.6.0-S"
+#endif
+
 #define BOARD_CODE_36LJU22
 // #define BOARD_CODE_09LJV23
 

@@ -94,6 +94,11 @@ if(DEFINED OSD_MENU_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_MENU_ENABLE)
 endif()
 
+# Add firmware version definition if provided via CMake
+if(DEFINED FW_VERSION)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE FW_VERSION="${FW_VERSION}")
+endif()
+
 # Add linker flag to print memory usage
 target_link_options(${EXECUTABLE_NAME} PRIVATE
     -Wl,--print-memory-usage
