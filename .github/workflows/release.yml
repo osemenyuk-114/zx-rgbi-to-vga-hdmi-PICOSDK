@@ -78,9 +78,9 @@ jobs:
       - name: Rename firmware file
         run: |
           FW_VERSION_NO_V="${{ steps.fw_version.outputs.version_no_v }}"
-          cp build/ZX_RGBI_TO_VGA_HDMI.uf2 ZX_RGBI_TO_VGA_HDMI.ino-${FW_VERSION_NO_V}.uf2
-          echo "Created: ZX_RGBI_TO_VGA_HDMI.ino-${FW_VERSION_NO_V}.uf2"
-      
+          cp build/ZX_RGBI_TO_VGA_HDMI.uf2 ZX_RGBI_TO_VGA_HDMI-${FW_VERSION_NO_V}.uf2
+          echo "Created: ZX_RGBI_TO_VGA_HDMI-${FW_VERSION_NO_V}.uf2"
+
       - name: Update latest tag
         run: |
           git config user.name "github-actions[bot]"
@@ -113,6 +113,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ZX_RGBI_TO_VGA_HDMI.ino-${{ steps.fw_version.outputs.version_no_v }}.uf2
+            ZX_RGBI_TO_VGA_HDMI-${{ steps.fw_version.outputs.version_no_v }}.uf2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
