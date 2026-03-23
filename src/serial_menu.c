@@ -1137,11 +1137,6 @@ void handle_serial_menu()
                     print_test_menu();
                     break;
 
-                case 'i':
-                    printf("  Current frame count ......... ");
-                    printf("%d\n", frame_count);
-                    break;
-
                 case '1':
                 case '2':
                 case '3':
@@ -1164,6 +1159,11 @@ void handle_serial_menu()
 
                     break;
                 }
+
+                case 'i':
+                    printf("  Current frame count ......... ");
+                    printf("%d\n", frame_count);
+                    break;
 
                 default:
                     break;

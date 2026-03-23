@@ -36,7 +36,6 @@ pico_sdk_init()
 
 # Build options
 # These control which source files are compiled and which libraries are linked
-# enable OSD menu
 set(OSD_MENU_ENABLE 1)
 
 # Add executable
@@ -54,6 +53,14 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video_output.c
 )
+
+# Conditionally add OSD common code
+if(DEFINED OSD_MENU_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd.c
+    )
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_ENABLE)
+endif()
 
 # Conditionally add OSD menu source files
 if(DEFINED OSD_MENU_ENABLE)

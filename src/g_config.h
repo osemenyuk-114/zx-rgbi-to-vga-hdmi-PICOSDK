@@ -11,7 +11,7 @@
 
 // FW_VERSION can be overridden at build time via -DFW_VERSION="..."
 #ifndef FW_VERSION
-#define FW_VERSION "v1.6.0-S"
+#define FW_VERSION "v1.6.1-S"
 #endif
 
 #define BOARD_CODE_36LJU22
@@ -61,6 +61,7 @@ typedef struct settings_t
   int16_t shX;
   int16_t shY;
   uint8_t pin_inversion_mask;
+  uint32_t crc;
 } settings_t;
 
 typedef struct video_mode_t
@@ -188,4 +189,8 @@ extern uint8_t g_v_buf[];
 /* handled in CMakeLists.txt
 // enable OSD menu
 #define OSD_MENU_ENABLE
+
+#if defined(OSD_MENU_ENABLE)
+#define OSD_ENABLE
+#endif
 */
