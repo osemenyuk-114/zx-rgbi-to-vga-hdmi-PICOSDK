@@ -35,6 +35,5 @@
     "raspberry-pi-pico.cmakeAutoConfigure": false,
     "raspberry-pi-pico.useCmakeTools": false,
     "raspberry-pi-pico.cmakePath": "${HOME}/.pico-sdk/cmake/v3.31.5/bin/cmake",
-    "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja",
-    "cmake.sourceDirectory": "C:/Users/alec/OneDrive/DIY/Projects/RGB-to-VGA-HDMI/zx-rgbi-to-vga-hdmi-PICOSDK-ff-osd"
+    "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja"
 }
