@@ -28,6 +28,7 @@ endif()
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
+include(FetchContent)
 
 project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 
@@ -37,6 +38,23 @@ pico_sdk_init()
 # Build options
 # These control which source files are compiled and which libraries are linked
 set(OSD_MENU_ENABLE 1)
+set(OSD_FF_ENABLE 1)
+
+# Automatically fetch pico_i2c_slave when FlashFloppy OSD is enabled.
+# Only add the i2c_slave library subdirectory, skip examples.
+if(DEFINED OSD_FF_ENABLE)
+    FetchContent_Declare(
+        pico_i2c_slave
+        GIT_REPOSITORY https://github.com/vmilea/pico_i2c_slave.git
+        GIT_TAG master
+    )
+    FetchContent_Populate(pico_i2c_slave)
+    add_subdirectory(
+        ${pico_i2c_slave_SOURCE_DIR}/i2c_slave
+        ${pico_i2c_slave_BINARY_DIR}/i2c_slave
+        EXCLUDE_FROM_ALL
+    )
+endif()
 
 # Add executable
 add_executable(${EXECUTABLE_NAME})
@@ -45,17 +63,17 @@ target_sources(
     ${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/main.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/main.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/serial_menu.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/v_buf.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video_output.c
 )
 
-# Conditionally add OSD common code
-if(DEFINED OSD_MENU_ENABLE)
+# Conditionally add OSD common code (used by both MENU and FF)
+if(DEFINED OSD_MENU_ENABLE OR DEFINED OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/osd.c
     )
@@ -68,6 +86,14 @@ if(DEFINED OSD_MENU_ENABLE)
         ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c
     )
 endif()
+
+# Conditionally add FlashFloppy OSD source files
+if(DEFINED OSD_FF_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd.c
+    )
+endif()
+
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/src/programs.pio
@@ -92,6 +118,14 @@ target_link_libraries(${EXECUTABLE_NAME}
     pico_stdlib
 )
 
+# Conditionally link I2C libraries for FlashFloppy OSD
+if(DEFINED OSD_FF_ENABLE)
+    target_link_libraries(${EXECUTABLE_NAME}
+        hardware_i2c
+        pico_i2c_slave
+    )
+endif()
+
 target_compile_options(${EXECUTABLE_NAME} PRIVATE 
     -O3 
 )
@@ -99,6 +133,10 @@ target_compile_options(${EXECUTABLE_NAME} PRIVATE
 # Add compile definitions for OSD features
 if(DEFINED OSD_MENU_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_MENU_ENABLE)
+endif()
+
+if(DEFINED OSD_FF_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_FF_ENABLE)
 endif()
 
 # Add firmware version definition if provided via CMake
