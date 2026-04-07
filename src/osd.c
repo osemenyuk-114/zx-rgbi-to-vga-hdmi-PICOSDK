@@ -621,6 +621,7 @@ bool osd_buttons_apply_release_block()
     // First fully-released frame after a block: re-arm debounce so a
     // release-edge bounce cannot be interpreted as a fresh press.
     uint64_t current_time = time_us_64();
+
     for (int i = 0; i < 3; i++)
         osd_buttons.last_press_time[i] = current_time;
 
