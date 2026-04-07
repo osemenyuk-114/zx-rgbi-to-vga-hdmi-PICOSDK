@@ -272,6 +272,7 @@ void osd_text_print(uint8_t row, uint8_t col, const char *str, uint8_t fg_color,
 
     // Fill left padding with spaces (avoid column 0 only if borders are enabled)
     uint8_t start_col = osd_mode.border_enabled ? 1 : 0;
+
     for (uint8_t i = start_col; i < col; i++)
     {
         osd_text_buffer[row_start + i] = ' ';
@@ -281,6 +282,7 @@ void osd_text_print(uint8_t row, uint8_t col, const char *str, uint8_t fg_color,
     uint8_t i;
     // Copy string characters (avoid last column only if borders are enabled)
     uint8_t effective_max_len;
+
     if (osd_mode.border_enabled)
         effective_max_len = (col + max_len >= osd_mode.columns) ? (osd_mode.columns - col - 1) : max_len;
     else
@@ -307,6 +309,7 @@ void osd_text_print_centered(uint8_t row, const char *str, uint8_t fg_color, uin
     uint8_t len = strlen(str);
     // Account for border columns only if borders are enabled
     uint8_t available_width = osd_mode.border_enabled ? (osd_mode.columns - 2) : osd_mode.columns;
+
     if (len > available_width)
         len = available_width;
 
@@ -404,6 +407,7 @@ void osd_update()
 #ifdef OSD_MENU_ENABLE
     // Menu OSD has higher priority
     osd_menu_update();
+
     if (osd_state.menu_active)
     {
 #ifdef OSD_FF_ENABLE
