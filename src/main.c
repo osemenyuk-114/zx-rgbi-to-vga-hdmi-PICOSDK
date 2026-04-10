@@ -39,6 +39,10 @@ void setup()
   stdio_init_all();
 
   load_settings(&settings);
+
+  settings.video_out_type = detect_video_output_type();
+  check_settings(&settings);
+
   set_buffering_mode(settings.buffering_mode);
   draw_welcome_screen(*(video_modes[settings.video_out_mode]));
   set_scanlines_mode();
