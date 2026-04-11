@@ -22,6 +22,7 @@ int16_t v_margin;
 video_out_type_t detect_video_output_type()
 {
   // VGA DAC per color channel:
+  //
   //   D0 --- 820 Ohm ----+
   //                      |
   //   D1 --- 390 Ohm ----+--- 75 Ohm --- GND (monitor termination)
@@ -29,7 +30,7 @@ video_out_type_t detect_video_output_type()
   // Drive D0 (820 Ohm) LOW, read D1 (390 Ohm) with internal pull-up (~50KOhm).
   //   VGA (no monitor):   D0-D1 path = 390 + 820 = 1210 Ohm    -> reads LOW
   //   VGA (with monitor): D1-GND = 390 + (820||75) = ~459 Ohm  -> reads LOW
-  //   HDMI/DVI:           >1MOhm isolation, pull-up wins        -> reads HIGH
+  //   HDMI/DVI:           >1MOhm isolation, pull-up wins       -> reads HIGH
 
   const uint pins_out[] = {VGA_PIN_D0, VGA_PIN_D0 + 2, VGA_PIN_D0 + 4};
   const uint pins_in[] = {VGA_PIN_D0 + 1, VGA_PIN_D0 + 3, VGA_PIN_D0 + 5};
