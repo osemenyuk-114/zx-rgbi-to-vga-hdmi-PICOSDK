@@ -44,8 +44,15 @@ set(BOARD_TYPE "36LJU22" CACHE STRING "Board variant")
 # set(BOARD_TYPE "LEO_REV3" CACHE STRING "Board variant")
 # set(BOARD_TYPE "09LJV23" CACHE STRING "Board variant")
 
+
+# OSD options (FF OSD is forced OFF for 11XGA24)
 option(OSD_MENU_ENABLE "Enable OSD settings menu" ON)
 option(OSD_FF_ENABLE "Enable FlashFloppy I2C OSD" ON)
+
+# Force OSD_FF_ENABLE OFF for 11XGA24 board
+if(BOARD_TYPE STREQUAL "11XGA24")
+    set(OSD_FF_ENABLE OFF CACHE BOOL "Force FlashFloppy I2C OSD OFF for 11XGA24" FORCE)
+endif()
 
 # Automatically fetch pico_i2c_slave when FlashFloppy OSD is enabled.
 # Only add the i2c_slave library subdirectory, skip examples.
