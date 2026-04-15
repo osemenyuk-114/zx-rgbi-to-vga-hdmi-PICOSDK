@@ -1,2 +1,4 @@
 build
-lib/*
+
+# Claude Code — local settings and notes (machine-specific, not for sharing)
+.claude/

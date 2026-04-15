@@ -35,14 +35,21 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Build options
+# Build options — override via CMake presets or -D flags
 # These control which source files are compiled and which libraries are linked
-set(OSD_MENU_ENABLE 1)
-set(OSD_FF_ENABLE 1)
+
+# Board variant — uncomment exactly one (only one may be active at a time)
+set(BOARD_TYPE "36LJU22" CACHE STRING "Board variant")
+# set(BOARD_TYPE "11XGA24" CACHE STRING "Board variant")
+# set(BOARD_TYPE "LEO_REV3" CACHE STRING "Board variant")
+# set(BOARD_TYPE "09LJV23" CACHE STRING "Board variant")
+
+option(OSD_MENU_ENABLE "Enable OSD settings menu" ON)
+option(OSD_FF_ENABLE "Enable FlashFloppy I2C OSD" ON)
 
 # Automatically fetch pico_i2c_slave when FlashFloppy OSD is enabled.
 # Only add the i2c_slave library subdirectory, skip examples.
-if(DEFINED OSD_FF_ENABLE)
+if(OSD_FF_ENABLE)
     FetchContent_Declare(
         pico_i2c_slave
         GIT_REPOSITORY https://github.com/vmilea/pico_i2c_slave.git
@@ -73,22 +80,21 @@ target_sources(
 )
 
 # Conditionally add OSD common code (used by both MENU and FF)
-if(DEFINED OSD_MENU_ENABLE OR DEFINED OSD_FF_ENABLE)
+if(OSD_MENU_ENABLE OR OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/osd.c
     )
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_ENABLE)
 endif()
 
 # Conditionally add OSD menu source files
-if(DEFINED OSD_MENU_ENABLE)
+if(OSD_MENU_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c
     )
 endif()
 
 # Conditionally add FlashFloppy OSD source files
-if(DEFINED OSD_FF_ENABLE)
+if(OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd.c
     )
@@ -119,7 +125,7 @@ target_link_libraries(${EXECUTABLE_NAME}
 )
 
 # Conditionally link I2C libraries for FlashFloppy OSD
-if(DEFINED OSD_FF_ENABLE)
+if(OSD_FF_ENABLE)
     target_link_libraries(${EXECUTABLE_NAME}
         hardware_i2c
         pico_i2c_slave
@@ -130,12 +136,14 @@ target_compile_options(${EXECUTABLE_NAME} PRIVATE
     -O3 
 )
 
-# Add compile definitions for OSD features
-if(DEFINED OSD_MENU_ENABLE)
+# Add compile definitions for board type and OSD features
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BOARD_${BOARD_TYPE})
+
+if(OSD_MENU_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_MENU_ENABLE)
 endif()
 
-if(DEFINED OSD_FF_ENABLE)
+if(OSD_FF_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_FF_ENABLE)
 endif()
 

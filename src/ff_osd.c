@@ -13,7 +13,6 @@
 // Cross-core flag: set from core0 menus when FF OSD is enabled after being
 // disabled at startup. Core1 loop picks this up and calls ff_osd_i2c_init().
 volatile bool ff_osd_needs_i2c_init = false;
-static bool ff_osd_i2c_initialized = false;
 
 // Helper macros
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -21,10 +20,8 @@ static bool ff_osd_i2c_initialized = false;
 
 #define barrier() asm volatile("" ::: "memory")
 
-// Use GP18/19 (I2C1), available on both WAVESHARE RP2040 ZERO and full size Raspberry Pi Pico boards.
-static const uint I2C_SLAVE_SDA_PIN = 18;
-static const uint I2C_SLAVE_SCL_PIN = 19;
-#define I2C_INST i2c1
+static const uint I2C_SLAVE_SDA_PIN = I2C_PIN_SDA;
+static const uint I2C_SLAVE_SCL_PIN = I2C_PIN_SCL;
 
 // 100 kHz: I2C Standard Mode, matching flashfloppy setting
 #define I2C_BAUDRATE 100000
@@ -128,6 +125,8 @@ static void lcd_display_update(void)
 
     ff_osd_display.rows = settings.ff_osd_config.rows;
     ff_osd_display.cols = settings.ff_osd_config.cols;
+    ff_osd_display.heights = 0;
+    memset(ff_osd_display.text, ' ', sizeof(ff_osd_display.text));
 }
 
 static void __not_in_flash_func(lcd_process_cmd)(uint8_t cmd)
@@ -386,8 +385,9 @@ static void __not_in_flash_func(i2c_slave_handler)(i2c_inst_t *i2c, i2c_slave_ev
 
 void ff_osd_i2c_init()
 {
+    static bool ff_osd_i2c_initialized = false;
     if (ff_osd_i2c_initialized)
-        return;
+        i2c_slave_deinit(I2C_INST);
 
     // Apply config to display (important for LCD mode)
     lcd_display_update();
@@ -543,18 +543,12 @@ void ff_osd_update()
 
             osd_text_heights[osd_row] = is_double_height;
 
-            // Calculate starting column to center the text horizontally
-            uint8_t text_len = strnlen(ff_osd_display.text[row], ff_osd_display.cols);
-
-            if (text_len == 0)
-                continue; // Skip empty rows
-
             // Copy the text row and clean non-printable characters
             char row_text[41];
 
             uint8_t out_pos = 0;
 
-            for (uint8_t col = 0; col < text_len && col < ff_osd_display.cols && col < osd_mode.columns; col++)
+            for (uint8_t col = 0; col < ff_osd_display.cols && col < osd_mode.columns; col++)
             {
                 uint8_t glyph = (uint8_t)ff_osd_display.text[row][col];
 

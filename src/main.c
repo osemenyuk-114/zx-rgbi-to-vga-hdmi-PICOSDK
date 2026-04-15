@@ -39,10 +39,10 @@ void setup()
   stdio_init_all();
 
   load_settings(&settings);
-
+#ifdef VIDEO_OUTPUT_AUTO_DETECT
   settings.video_out_type = detect_video_output_type();
   check_settings(&settings);
-
+#endif
   set_buffering_mode(settings.buffering_mode);
   draw_welcome_screen(*(video_modes[settings.video_out_mode]));
   set_scanlines_mode();
@@ -61,18 +61,12 @@ void loop()
 {
 #ifdef OSD_ENABLE
   osd_update();
-
-  if (!osd_state.visible)
-  {
 #endif
-    char c = get_menu_input(100);
-
-    if (c != 0)
-      handle_serial_menu();
 
 #ifdef OSD_ENABLE
-  }
+  if (!osd_state.visible)
 #endif
+    handle_serial_menu();
 }
 
 void __attribute__((weak)) setup1()
