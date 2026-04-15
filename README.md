@@ -68,7 +68,7 @@ For detailed hardware and original software information, see the upstream projec
 
 - **Settings Integrity**: CRC-32 validation on saved settings — corrupted or uninitialized flash data is detected on boot and automatically replaced with safe defaults.
 - **FF OSD Integration**: Added dedicated FlashFloppy/Gotek I2C OSD support, including protocol switching and separate documentation for setup and usage.
-- **FF OSD Runtime Control**: FF OSD can be enabled/disabled at runtime, with delayed I2C initialization when enabled after boot.
+- **FF OSD Runtime Control**: FF OSD can be enabled/disabled and the protocol switched at runtime; both operations trigger a full I2C re-initialization on the next Core 1 loop cycle.
 - **Memory Optimization**: Reduced unnecessary memory allocations and pointer complexity in video output modules.
 - **Architecture Refinements**: Better separation of concerns between video input capture and output generation systems.
 - **Maintainability**: Cleaner code structure while preserving critical hardware-specific requirements for reliable video processing.
