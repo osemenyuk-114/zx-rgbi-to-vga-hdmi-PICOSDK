@@ -16,6 +16,11 @@
     "cmake.configureOnOpen": true,
     "cmake.generator": "Ninja",
     "cmake.cmakePath": "${userHome}/.pico-sdk/cmake/v3.31.5/bin/cmake",
+    "cmake.environment": {
+        "PICO_SDK_PATH": "${userHome}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "${userHome}/.pico-sdk/toolchain/15_2_Rel1",
+        "Path": "${userHome}/.pico-sdk/toolchain/15_2_Rel1/bin;${userHome}/.pico-sdk/ninja/v1.12.1;${userHome}/.pico-sdk/cmake/v3.31.5/bin;${env:PATH}"
+    },
     "C_Cpp.debugShortcut": false,
     "terminal.integrated.env.windows": {
         "PICO_SDK_PATH": "${env:USERPROFILE}/.pico-sdk/sdk/2.2.0",

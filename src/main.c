@@ -6,7 +6,6 @@
 
 #include "g_config.h"
 #include "rgb_capture.h"
-#include "serial_menu.h"
 #include "settings.h"
 #include "v_buf.h"
 #include "video_output.h"
@@ -17,6 +16,10 @@
 
 #ifdef OSD_FF_ENABLE
 #include "ff_osd.h"
+#endif
+
+#ifdef SERIAL_MENU_ENABLE
+#include "serial_menu.h"
 #endif
 
 #define PIN_LED (25u)
@@ -36,7 +39,9 @@ void setup()
   vreg_set_voltage(VREG_VOLTAGE_1_25);
   sleep_ms(100);
 
+#ifdef SERIAL_MENU_ENABLE
   stdio_init_all();
+#endif
 
   load_settings(&settings);
 #ifdef VIDEO_OUTPUT_AUTO_DETECT
@@ -54,7 +59,9 @@ void setup()
 
   start_core0 = true;
 
+#ifdef SERIAL_MENU_ENABLE
   printf("  Starting...\n\n");
+#endif
 }
 
 void loop()
@@ -63,10 +70,12 @@ void loop()
   osd_update();
 #endif
 
+#ifdef SERIAL_MENU_ENABLE
 #ifdef OSD_ENABLE
   if (!osd_state.visible)
 #endif
     handle_serial_menu();
+#endif
 }
 
 void __attribute__((weak)) setup1()

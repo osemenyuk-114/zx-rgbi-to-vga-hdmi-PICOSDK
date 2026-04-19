@@ -55,6 +55,8 @@ void print_main_menu()
 {
     printf("\n      * ZX RGB(I) to VGA/HDMI ");
     printf("%s", FW_VERSION);
+    printf(" - ");
+    printf("%s", HW_VERSION);
     printf(" *\n\n");
 
     printf("  o   set video output type (DVI/VGA)\n");
