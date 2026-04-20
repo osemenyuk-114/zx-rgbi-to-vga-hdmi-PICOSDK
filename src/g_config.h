@@ -11,7 +11,7 @@
 
 // FW_VERSION can be overridden at build time via -DFW_VERSION="..."
 #ifndef FW_VERSION
-#define FW_VERSION "v1.7.1-S"
+#define FW_VERSION "v1.7.1"
 #endif
 
 #define GIT_REPO_URL_1 "https://github.com/"

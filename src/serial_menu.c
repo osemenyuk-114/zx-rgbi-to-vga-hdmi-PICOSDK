@@ -1399,7 +1399,7 @@ void handle_serial_menu()
 
                     for (int row = 0; row < ff_osd_display.rows && row < 4; row++)
                     {
-                        printf("  Row ");
+                        printf("    Row ");
                         printf("%d", row);
                         printf(": Height: ");
                         printf("%d", (ff_osd_display.heights >> row) & 1);
