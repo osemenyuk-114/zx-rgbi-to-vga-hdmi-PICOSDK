@@ -53,12 +53,9 @@ set(BOARD "BOARD_36LJU22")
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
-# Build options for OSD features — cache variables to support CMakePresets
-# To change: use presets (cmake --preset no-osd) OR edit here + clear cache
-set(OSD_MENU_ENABLE ON CACHE BOOL "Enable OSD settings menu")
-set(OSD_FF_ENABLE ON CACHE BOOL "Enable FlashFloppy I2C OSD")
+set(OSD_MENU_ENABLE ON)
+set(OSD_FF_ENABLE ON)
 
-# Serial menu option — NOT cached, changes take effect immediately
 set(SERIAL_MENU_ENABLE ON)
 
 # Force OSD_FF_ENABLE OFF for 11XGA24 board
