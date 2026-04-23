@@ -38,9 +38,10 @@ For detailed hardware and original software information, see the upstream projec
   - See [FF OSD Guide](docs/FF_OSD_GUIDE.md) for wiring and configuration details.
 - **Configuration via Serial Terminal:**
   - Alternative text-based menu system for headless configuration.
-  - Frequency presets for self-synchronizing capture mode (supports ZX Spectrum 48K/128K pixel clocks).
+  - Frequency presets for self-synchronizing capture mode (ZX Spectrum 48K/128K pixel clocks).
   - Real-time adjustment of all parameters (changes applied immediately).
   - Settings can be saved to flash memory without restart.
+- **Capture Frequency Presets:** OSD and serial menus support preset snap for ZX Spectrum 48K (7.0 MHz) and 128K/+2/+2A/+3 (7.0938 MHz) pixel clocks.
 - **Test/Welcome Screen:** Styled after the ZX Spectrum 128K.
 
 ### Hardware
