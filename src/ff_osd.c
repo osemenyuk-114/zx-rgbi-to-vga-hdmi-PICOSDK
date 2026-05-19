@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <stddef.h>
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
@@ -9,6 +10,8 @@
 #include "font.h"
 #include "osd.h"
 #include "video_output.h"
+
+#ifdef OSD_FF_ENABLE // Compile FF OSD code only if enabled in g_config.h to make it compatible with Arduino IDE builds that include ff_osd.c in all configurations
 
 // Cross-core flag: set from core0 menus when FF OSD is enabled after being
 // disabled at startup. Core1 loop picks this up and calls ff_osd_i2c_init().
@@ -572,3 +575,5 @@ void ff_osd_update()
 
     osd_state.visible = ff_osd_display.on;
 }
+
+#endif

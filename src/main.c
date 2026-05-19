@@ -22,8 +22,6 @@
 #include "serial_menu.h"
 #endif
 
-#define PIN_LED (25u)
-
 settings_t settings;
 
 volatile bool start_core0 = false;
@@ -80,9 +78,9 @@ void loop()
 
 void __attribute__((weak)) setup1()
 {
-  gpio_init(PIN_LED);
-  gpio_set_dir(PIN_LED, GPIO_OUT);
-  gpio_put(PIN_LED, 0);
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
+  gpio_put(LED_PIN, 0);
 
   while (!start_core0)
     sleep_ms(10);
@@ -123,7 +121,7 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
 
   if (frame_count > 1)
   {
-    gpio_put(PIN_LED, (frame_count & 0x20) && capture_active);
+    gpio_put(LED_PIN, (frame_count & 0x20) && capture_active);
 
     if (frame_count == frame_count_tmp1)
     {
