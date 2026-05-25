@@ -30,12 +30,6 @@
 #define B_LOW 0b00000010
 #endif
 
-// sync pulse patterns (positive polarity)
-#define NO_SYNC 0b00000000
-#define V_SYNC 0b10000000
-#define H_SYNC 0b01000000
-#define VH_SYNC 0b11000000
-
 extern settings_t settings;
 
 static int dma_ch0;
@@ -235,23 +229,26 @@ void __not_in_flash_func(dma_handler_vga)()
     else
       for (; x < osd_mode.start_x; x++)
       {
-        *line_buf++ = palette[0];
         scr_line++;
+
+        *line_buf++ = palette[0];
       }
 
     for (; (x + 4) <= osd_mode.end_x; x += 4)
     { // ultra-simplified OSD compositing with optimized unrolling
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
-      *line_buf++ = palette[*osd_line++];
       scr_line += 4;
+
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
+      *line_buf++ = palette[*osd_line++];
     }
 
     for (; x < osd_mode.end_x; x++)
     { // handle remaining bytes (0-3 bytes)
-      *line_buf++ = palette[*osd_line++];
       scr_line++;
+
+      *line_buf++ = palette[*osd_line++];
     }
 
     if (!osd_mode.full_width)
@@ -270,8 +267,9 @@ void __not_in_flash_func(dma_handler_vga)()
     else
       for (; x < h_visible_area; x++)
       {
-        *line_buf++ = palette[0];
         scr_line++;
+
+        *line_buf++ = palette[0];
       }
   }
   else
@@ -313,6 +311,12 @@ void start_vga()
 
   set_sys_clock_khz(video_mode.sys_freq, true);
   sleep_ms(10);
+
+  // sync pulse patterns (positive polarity)
+  const uint8_t NO_SYNC = 0b00000000;
+  const uint8_t V_SYNC = 0b10000000;
+  const uint8_t H_SYNC = 0b01000000;
+  const uint8_t VH_SYNC = 0b11000000;
 
   // palette initialization
   for (int i = 0; i < 16; i++)
