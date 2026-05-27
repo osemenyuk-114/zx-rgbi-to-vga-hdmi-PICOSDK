@@ -43,16 +43,16 @@ static uint64_t get_ser_diff_data(uint16_t dataR, uint16_t dataG, uint16_t dataB
   uint8_t bG;
   uint8_t bB;
 
-  for (int i = 0; i < 10; i++)
+  for (int bit = 9; bit >= 0; bit--)
   {
     out64 <<= 6;
 
-    if (i == 5)
+    if (bit == 4)
       out64 <<= 2;
 
-    bR = (dataR >> (9 - i)) & 1;
-    bG = (dataG >> (9 - i)) & 1;
-    bB = (dataB >> (9 - i)) & 1;
+    bR = (dataR >> bit) & 1;
+    bG = (dataG >> bit) & 1;
+    bB = (dataB >> bit) & 1;
 
 #ifndef DVI_PINS_REVERSED
     bR = 2 - bR;
