@@ -268,10 +268,10 @@ void start_dvi()
   sleep_ms(10);
 
   // initialization of constants
-  const uint16_t b0 = 0b1101010100;
-  const uint16_t b1 = 0b0010101011;
-  const uint16_t b2 = 0b0101010100;
-  const uint16_t b3 = 0b1010101011;
+  static const uint16_t b0 = 0b1101010100;
+  static const uint16_t b1 = 0b0010101011;
+  static const uint16_t b2 = 0b0101010100;
+  static const uint16_t b3 = 0b1010101011;
 
   sync_data[0b00] = get_ser_diff_data(b0, b0, b3);
   sync_data[0b01] = get_ser_diff_data(b0, b0, b2);

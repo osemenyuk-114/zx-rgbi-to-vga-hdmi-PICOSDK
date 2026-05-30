@@ -48,8 +48,6 @@ static uint32_t *v_out_dma_buf[4];
 // 2KB-aligned palette for better cache performance (compile-time alignment)
 static uint16_t palette[256] __attribute__((aligned(2048)));
 
-void __not_in_flash_func(memset32)(uint32_t *dst, const uint32_t data, uint32_t size);
-
 void __not_in_flash_func(dma_handler_vga)()
 {
   static uint16_t y = 0;
@@ -313,10 +311,10 @@ void start_vga()
   sleep_ms(10);
 
   // sync pulse patterns (positive polarity)
-  const uint8_t NO_SYNC = 0b00000000;
-  const uint8_t V_SYNC = 0b10000000;
-  const uint8_t H_SYNC = 0b01000000;
-  const uint8_t VH_SYNC = 0b11000000;
+  static const uint8_t NO_SYNC = 0b00000000;
+  static const uint8_t H_SYNC = 0b01000000;
+  static const uint8_t V_SYNC = 0b10000000;
+  static const uint8_t VH_SYNC = 0b11000000;
 
   // palette initialization
   for (int i = 0; i < 16; i++)
@@ -366,7 +364,7 @@ void start_vga()
 
   // PIO program load
   offset = pio_add_program(PIO_VGA, &pio_vga_program);
-  sm_config_set_wrap(&c, offset, offset + (pio_vga_program.length - 1));
+  sm_config_set_wrap(&c, offset, offset + pio_vga_program.length - 1);
 
   sm_config_set_out_pins(&c, VGA_PIN_D0, 8);
   pio_sm_set_consecutive_pindirs(PIO_VGA, SM_VGA, VGA_PIN_D0, 8, true);
