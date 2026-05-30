@@ -15,25 +15,33 @@
 
 extern settings_t settings;
 
-static int dma_ch0;
-static int dma_ch1;
+#define SM_DVI_CONV (SM_DVI + 1)
+
+static int dma_ch0; // data line → conv PIO TX
+static int dma_ch1; // control: reloads ch0 read addr, fires IRQ
+static int dma_ch2; // set_addr: reads address from conv RX → sets ch3 read addr
+static int dma_ch3; // out_data: reads palette data → sends to output PIO TX
 static uint offset;
+static uint offset_conv;
 
 extern video_mode_t video_mode;
 extern int16_t h_visible_area;
 
 static uint32_t *v_out_dma_buf[2];
+static uint32_t *v_out_sync_hblank; // pre-filled H-blank line (NO_SYNC + H_SYNC + NO_SYNC)
+static uint32_t *v_out_sync_vsync;  // pre-filled V-sync line (V_SYNC + VH_SYNC + V_SYNC)
 
-static uint64_t sync_data[4];
-// 2KB-aligned palette for better cache performance (compile-time alignment)
-static uint64_t palette[32] __attribute__((aligned(2048)));
+static uint32_t pixels[256];
 
-static void __not_in_flash_func(memset64)(uint64_t *dst, const uint64_t data, uint32_t size)
-{
-  uint64_t *end = dst + size;
-  while (dst < end)
-    *dst++ = data;
-}
+// 4KB-aligned palette: 20 entries × 16 bytes (4 × uint32_t each)
+// Each entry: {normal_lo, normal_hi, inverted_lo, inverted_hi}
+// Entries 0-15: colors, 16-19: sync patterns
+static uint32_t palette[20 * 4] __attribute__((aligned(4096)));
+// sync pulse pattern indexes (after 16 color entries)
+static const uint8_t NO_SYNC = 16;
+static const uint8_t H_SYNC = 17;
+static const uint8_t V_SYNC = 18;
+static const uint8_t VH_SYNC = 19;
 
 static uint64_t get_ser_diff_data(uint16_t dataR, uint16_t dataG, uint16_t dataB)
 {
@@ -103,6 +111,20 @@ static uint tmds_encoder(uint8_t d8)
   return d_out;
 }
 
+// Load a 32-bit value into PIO X register (SM must be stopped or idle)
+static void pio_set_x(PIO pio, int sm, uint32_t v)
+{
+  uint instr_shift = pio_encode_in(pio_x, 4);
+  uint instr_mov = pio_encode_mov(pio_x, pio_isr);
+  for (int i = 0; i < 8; i++)
+  {
+    const uint32_t nibble = (v >> (i * 4)) & 0xf;
+    pio_sm_exec(pio, sm, pio_encode_set(pio_x, nibble));
+    pio_sm_exec(pio, sm, instr_shift);
+  }
+  pio_sm_exec(pio, sm, instr_mov);
+}
+
 static void __not_in_flash_func(dma_handler_dvi)()
 {
   static uint16_t y = 0;
@@ -112,8 +134,6 @@ static void __not_in_flash_func(dma_handler_dvi)()
 
   dma_hw->ints0 = 1u << dma_ch1;
 
-  dma_channel_set_read_addr(dma_ch1, &v_out_dma_buf[active_buf_idx & 1], false);
-
   y++;
 
   if (y == video_mode.whole_frame)
@@ -122,21 +142,23 @@ static void __not_in_flash_func(dma_handler_dvi)()
     scr_buffer = get_v_buf_out();
   }
 
-  if (y & 1)
-    return;
-
-  active_buf_idx++;
-
-  uint64_t *active_buf = (uint64_t *)(v_out_dma_buf[active_buf_idx & 1]);
-
-  if (scr_buffer == NULL)
-    return;
-
   if (y < video_mode.v_visible_area)
-  { // image area
+  { // visible area — use ping-pong buffers (H sync pre-filled at init)
+    dma_channel_set_read_addr(dma_ch1, &v_out_dma_buf[active_buf_idx & 1], false);
+
+    if (y & 1)
+      return;
+
+    active_buf_idx++;
+
+    uint32_t *active_buf = v_out_dma_buf[active_buf_idx & 1];
+
+    if (scr_buffer == NULL)
+      return;
+
     uint16_t scaled_y = y / video_mode.div;
     uint8_t *scr_line = &scr_buffer[scaled_y * (V_BUF_W / 2)];
-    uint64_t *line_buf = active_buf;
+    uint32_t *line_buf = active_buf;
 
 #ifdef OSD_ENABLE
     // check if OSD is visible and overlaps with current scaled scanline
@@ -151,145 +173,117 @@ static void __not_in_flash_func(dma_handler_dvi)()
       if (!osd_mode.full_width)
         for (; x < osd_mode.start_x; x++)
         { // fast loop for pre-OSD area (no OSD checks) - optimized palette access
-          uint8_t c2 = *scr_line++;
-          uint8_t pixel1 = c2 & 0xf;
-          uint8_t pixel2 = c2 >> 4;
-
-          uint64_t *palette_ptr = &palette[pixel1 << 1];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
-
-          palette_ptr = &palette[pixel2 << 1];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
+          *line_buf++ = pixels[*scr_line++];
         }
       else
         for (; x < osd_mode.start_x; x++)
         {
           scr_line++;
 
-          uint64_t *palette_ptr = &palette[0];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
-
-          palette_ptr = &palette[0];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
+          *line_buf++ = pixels[0]; // black pixels
         }
 
       for (; x < osd_mode.end_x; x++)
       { // ultra-simplified OSD compositing - byte-aligned boundaries (2-pixel aligned)
         scr_line++;
-        uint8_t o2 = *osd_line++;
-        uint8_t pixel1 = o2 & 0xf;
-        uint8_t pixel2 = o2 >> 4;
 
-        uint64_t *palette_ptr = &palette[pixel1 << 1];
-        *line_buf++ = *palette_ptr++;
-        *line_buf++ = *palette_ptr;
-
-        palette_ptr = &palette[pixel2 << 1];
-        *line_buf++ = *palette_ptr++;
-        *line_buf++ = *palette_ptr;
+        *line_buf++ = pixels[*osd_line++];
       }
 
       if (!osd_mode.full_width)
         for (; x < h_visible_area; x++)
         { // fast loop for post-OSD area (no OSD checks) - optimized palette access
-          uint8_t c2 = *scr_line++;
-          uint8_t pixel1 = c2 & 0xf;
-          uint8_t pixel2 = c2 >> 4;
-
-          uint64_t *palette_ptr = &palette[pixel1 << 1];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
-
-          palette_ptr = &palette[pixel2 << 1];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
+          *line_buf++ = pixels[*scr_line++];
         }
       else
         for (; x < h_visible_area; x++)
         {
           scr_line++;
 
-          uint64_t *palette_ptr = &palette[0];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
-
-          palette_ptr = &palette[0];
-          *line_buf++ = *palette_ptr++;
-          *line_buf++ = *palette_ptr;
+          *line_buf++ = pixels[0]; // black pixels
         }
     }
     else
 #endif
       for (int x = 0; x < h_visible_area; x++)
       { // no OSD - maximum speed path
-        uint8_t c2 = *scr_line++;
-        uint8_t pixel1 = c2 & 0xf;
-        uint8_t pixel2 = c2 >> 4;
-
-        uint64_t *palette_ptr = &palette[pixel1 << 1];
-        *line_buf++ = *palette_ptr++;
-        *line_buf++ = *palette_ptr;
-
-        palette_ptr = &palette[pixel2 << 1];
-        *line_buf++ = *palette_ptr++;
-        *line_buf++ = *palette_ptr;
+        *line_buf++ = pixels[*scr_line++];
       }
-
-    // horizontal sync
-    memset64(active_buf + video_mode.h_visible_area, sync_data[0b00], video_mode.h_front_porch);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch, sync_data[0b01], video_mode.h_sync_pulse);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, sync_data[0b00], video_mode.h_back_porch);
   }
   else if (y >= (video_mode.v_visible_area + video_mode.v_front_porch) && y < (video_mode.v_visible_area + video_mode.v_front_porch + video_mode.v_sync_pulse))
   {
-    // vertical sync pulse
-    memset64(active_buf, sync_data[0b10], video_mode.h_visible_area + video_mode.h_front_porch);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch, sync_data[0b11], video_mode.h_sync_pulse);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, sync_data[0b10], video_mode.h_back_porch);
+    // V sync — use pre-filled buffer
+    dma_channel_set_read_addr(dma_ch1, &v_out_sync_vsync, false);
   }
   else
   {
-    // vertical sync back porch
-    memset64(active_buf, sync_data[0b00], video_mode.h_visible_area + video_mode.h_front_porch);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch, sync_data[0b01], video_mode.h_sync_pulse);
-    memset64(active_buf + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, sync_data[0b00], video_mode.h_back_porch);
+    // H blank (front/back porch) — use pre-filled buffer
+    dma_channel_set_read_addr(dma_ch1, &v_out_sync_hblank, false);
   }
 }
 
 void start_dvi()
 {
-  int whole_line = video_mode.whole_line * video_mode.div;
+  int buf_size = video_mode.whole_line;
 
   set_sys_clock_khz(video_mode.sys_freq, true);
   sleep_ms(10);
 
-  // initialization of constants
-  static const uint16_t b0 = 0b1101010100;
-  static const uint16_t b1 = 0b0010101011;
-  static const uint16_t b2 = 0b0101010100;
-  static const uint16_t b3 = 0b1010101011;
+  // pixels[] lookup: each input byte (2 packed 4-bit pixels) → 2 palette indices
+  // byte order (LSB first): p1_color, p2_color (each palette entry has norm+inv)
+  for (int i = 0; i < 256; i++)
+  {
+    uint8_t p1 = i & 0x0f;
+    uint8_t p2 = (i >> 4) & 0x0f;
 
-  sync_data[0b00] = get_ser_diff_data(b0, b0, b3);
-  sync_data[0b01] = get_ser_diff_data(b0, b0, b2);
-  sync_data[0b10] = get_ser_diff_data(b0, b0, b1);
-  sync_data[0b11] = get_ser_diff_data(b0, b0, b0);
+    pixels[i] = (p2 << 8) | p1;
+  }
 
-  // palette initialization
+  // TMDS control character constants
+  const uint16_t b0 = 0b1101010100;
+  const uint16_t b1 = 0b0010101011;
+  const uint16_t b2 = 0b0101010100;
+  const uint16_t b3 = 0b1010101011;
+
+  // sync palette entries (16 bytes each: norm_lo, norm_hi, norm_lo, norm_hi)
+  uint64_t sync_val;
+  sync_val = get_ser_diff_data(b0, b0, b3);
+  palette[NO_SYNC * 4 + 0] = (uint32_t)(sync_val);
+  palette[NO_SYNC * 4 + 1] = (uint32_t)(sync_val >> 32);
+  palette[NO_SYNC * 4 + 2] = (uint32_t)(sync_val);
+  palette[NO_SYNC * 4 + 3] = (uint32_t)(sync_val >> 32);
+  sync_val = get_ser_diff_data(b0, b0, b2);
+  palette[H_SYNC * 4 + 0] = (uint32_t)(sync_val);
+  palette[H_SYNC * 4 + 1] = (uint32_t)(sync_val >> 32);
+  palette[H_SYNC * 4 + 2] = (uint32_t)(sync_val);
+  palette[H_SYNC * 4 + 3] = (uint32_t)(sync_val >> 32);
+  sync_val = get_ser_diff_data(b0, b0, b1);
+  palette[V_SYNC * 4 + 0] = (uint32_t)(sync_val);
+  palette[V_SYNC * 4 + 1] = (uint32_t)(sync_val >> 32);
+  palette[V_SYNC * 4 + 2] = (uint32_t)(sync_val);
+  palette[V_SYNC * 4 + 3] = (uint32_t)(sync_val >> 32);
+  sync_val = get_ser_diff_data(b0, b0, b0);
+  palette[VH_SYNC * 4 + 0] = (uint32_t)(sync_val);
+  palette[VH_SYNC * 4 + 1] = (uint32_t)(sync_val >> 32);
+  palette[VH_SYNC * 4 + 2] = (uint32_t)(sync_val);
+  palette[VH_SYNC * 4 + 3] = (uint32_t)(sync_val >> 32);
+
+  // color palette: 16 entries × 16 bytes {norm_lo, norm_hi, inv_lo, inv_hi}
   for (int c = 0; c < 16; c++)
   {
     uint8_t Y = (c >> 3) & 1;
     uint8_t R = ((c >> 2) & 1) ? (Y ? 255 : 170) : 0;
     uint8_t G = ((c >> 1) & 1) ? (Y ? 255 : 170) : 0;
     uint8_t B = ((c >> 0) & 1) ? (Y ? 255 : 170) : 0;
-    palette[c * 2] = get_ser_diff_data(tmds_encoder(R), tmds_encoder(G), tmds_encoder(B));
-    palette[c * 2 + 1] = palette[c * 2] ^ 0x0003ffffffffffffl;
+    uint64_t normal = get_ser_diff_data(tmds_encoder(R), tmds_encoder(G), tmds_encoder(B));
+    uint64_t inverted = normal ^ 0x0003ffffffffffffl;
+    palette[c * 4 + 0] = (uint32_t)(normal);
+    palette[c * 4 + 1] = (uint32_t)(normal >> 32);
+    palette[c * 4 + 2] = (uint32_t)(inverted);
+    palette[c * 4 + 3] = (uint32_t)(inverted >> 32);
   }
 
-  // set DVI pins
+  // set DVI data pins
   for (int i = DVI_PIN_D0; i < DVI_PIN_D0 + 6; i++)
   {
     pio_gpio_init(PIO_DVI, i);
@@ -297,6 +291,7 @@ void start_dvi()
     gpio_set_slew_rate(i, GPIO_SLEW_RATE_FAST);
   }
 
+  // set DVI clock pins
   for (int i = DVI_PIN_CLK0; i < DVI_PIN_CLK0 + 2; i++)
   {
     pio_gpio_init(PIO_DVI, i);
@@ -304,14 +299,17 @@ void start_dvi()
     gpio_set_slew_rate(i, GPIO_SLEW_RATE_FAST);
   }
 
-  // buffers initialization
-  v_out_dma_buf[0] = calloc(whole_line, sizeof(uint32_t));
-  v_out_dma_buf[1] = calloc(whole_line, sizeof(uint32_t));
+  // index buffers: each byte is a palette index
+  v_out_dma_buf[0] = calloc(buf_size, sizeof(uint8_t));
+  v_out_dma_buf[1] = calloc(buf_size, sizeof(uint8_t));
 
-  // PIO initialization
+  // pre-filled sync line buffers (allocated once, never modified)
+  v_out_sync_hblank = calloc(buf_size, sizeof(uint8_t));
+  v_out_sync_vsync = calloc(buf_size, sizeof(uint8_t));
+
+  // === Output PIO (SM0): TMDS serializer ===
   pio_sm_config c = pio_get_default_sm_config();
 
-  // PIO program load
   offset = pio_add_program(PIO_DVI, &pio_dvi_program);
   sm_config_set_wrap(&c, offset, offset + pio_dvi_program.length - 1);
 
@@ -330,51 +328,121 @@ void start_dvi()
   pio_sm_init(PIO_DVI, SM_DVI, offset, &c);
   pio_sm_set_enabled(PIO_DVI, SM_DVI, true);
 
-  // DMA initialization
+  // === Conv PIO (SM1): index → palette address converter ===
+  pio_sm_config c_conv = pio_get_default_sm_config();
+
+  offset_conv = pio_add_program(PIO_DVI, &pio_dvi_conv_program);
+  sm_config_set_wrap(&c_conv, offset_conv, offset_conv + pio_dvi_conv_program.length - 1);
+  sm_config_set_in_shift(&c_conv, true, false, 32);  // shift right, no autopush
+  sm_config_set_out_shift(&c_conv, true, false, 32); // shift right, no autopull (explicit pull used)
+
+  pio_sm_clear_fifos(PIO_DVI, SM_DVI_CONV);
+  pio_sm_restart(PIO_DVI, SM_DVI_CONV);
+
+  // load palette base address >> 12 into X register (4KB-aligned, 16-byte entries)
+  pio_set_x(PIO_DVI, SM_DVI_CONV, ((uint32_t)palette) >> 12);
+
+  pio_sm_init(PIO_DVI, SM_DVI_CONV, offset_conv, &c_conv);
+  pio_sm_set_enabled(PIO_DVI, SM_DVI_CONV, true);
+
+  // === DMA initialization (4 channels) ===
   dma_ch0 = dma_claim_unused_channel(true);
   dma_ch1 = dma_claim_unused_channel(true);
+  dma_ch2 = dma_claim_unused_channel(true);
+  dma_ch3 = dma_claim_unused_channel(true);
 
-  // main (data) DMA channel
+  // ch0: data line → conv PIO TX (feeds index buffer to converter)
   dma_channel_config c0 = dma_channel_get_default_config(dma_ch0);
-
   channel_config_set_transfer_data_size(&c0, DMA_SIZE_32);
   channel_config_set_read_increment(&c0, true);
   channel_config_set_write_increment(&c0, false);
-  channel_config_set_dreq(&c0, DREQ_PIO_DVI + SM_DVI);
-  channel_config_set_chain_to(&c0, dma_ch1); // chain to control channel
+  channel_config_set_dreq(&c0, DREQ_PIO_DVI + SM_DVI_CONV); // conv SM TX
+  channel_config_set_chain_to(&c0, dma_ch1);
 
   dma_channel_configure(
       dma_ch0,
       &c0,
-      &PIO_DVI->txf[SM_DVI], // write address
-      &v_out_dma_buf[0][0],  // read address
-      whole_line,            //
-      false                  // don't start yet
+      &PIO_DVI->txf[SM_DVI_CONV], // write: conv PIO TX FIFO
+      &v_out_dma_buf[0][0],       // read: index buffer
+      buf_size / 4,               // transfer count: bytes / 4
+      false                       // don't start yet
   );
 
-  // control DMA channel
+  // ch1: control — reloads ch0 read addr, fires IRQ
   dma_channel_config c1 = dma_channel_get_default_config(dma_ch1);
-
   channel_config_set_transfer_data_size(&c1, DMA_SIZE_32);
   channel_config_set_read_increment(&c1, false);
   channel_config_set_write_increment(&c1, false);
-  channel_config_set_chain_to(&c1, dma_ch0); // chain to other channel
+  channel_config_set_chain_to(&c1, dma_ch0);
 
   dma_channel_configure(
       dma_ch1,
       &c1,
-      &dma_hw->ch[dma_ch0].read_addr, // write address
-      &v_out_dma_buf[0],              // read address
-      1,                              //
-      false                           // don't start yet
+      &dma_hw->ch[dma_ch0].read_addr, // write: ch0's read addr
+      &v_out_dma_buf[0],              // read: pointer to buffer
+      1,
+      false // don't start yet
   );
 
-  dma_channel_set_irq0_enabled(dma_ch1, true);
+  // ch3: out_data — reads palette entry → sends TMDS data to output PIO
+  // NOTE: ch3 MUST be configured before ch2, because ch2 chains to ch3
+  dma_channel_config c3 = dma_channel_get_default_config(dma_ch3);
+  channel_config_set_transfer_data_size(&c3, DMA_SIZE_32);
+  channel_config_set_read_increment(&c3, true);
+  channel_config_set_write_increment(&c3, false);
+  channel_config_set_dreq(&c3, DREQ_PIO_DVI + SM_DVI); // output SM TX
+  channel_config_set_chain_to(&c3, dma_ch2);
 
-  // configure the processor to run dma_handler() when DMA IRQ 0 is asserted
+  dma_channel_configure(
+      dma_ch3,
+      &c3,
+      &PIO_DVI->txf[SM_DVI], // write: output PIO TX FIFO
+      palette,               // read: palette (overwritten by ch2 each cycle)
+      4,                     // 4 × uint32_t = 16 bytes per palette entry (norm + inv)
+      false                  // don't start yet
+  );
+
+  // ch2: set_addr — reads palette address from conv RX → sets ch3 read addr
+  dma_channel_config c2 = dma_channel_get_default_config(dma_ch2);
+  channel_config_set_transfer_data_size(&c2, DMA_SIZE_32);
+  channel_config_set_read_increment(&c2, false);
+  channel_config_set_write_increment(&c2, false);
+  channel_config_set_dreq(&c2, DREQ_PIO0_RX0 + SM_DVI_CONV); // conv SM RX
+  channel_config_set_chain_to(&c2, dma_ch3);
+
+  dma_channel_configure(
+      dma_ch2,
+      &c2,
+      &dma_hw->ch[dma_ch3].read_addr, // write: ch3's read addr
+      &PIO_DVI->rxf[SM_DVI_CONV],     // read: conv RX FIFO
+      1,
+      true // start immediately — ch3 is already configured
+  );
+
+  // IRQ setup
+  dma_channel_set_irq0_enabled(dma_ch1, true);
   irq_set_exclusive_handler(DMA_IRQ_0, dma_handler_dvi);
   irq_set_enabled(DMA_IRQ_0, true);
 
+  // pre-fill H-sync tail in ping-pong buffers (pixel rendering never overwrites this region)
+  for (int b = 0; b < 2; b++)
+  {
+    memset((uint8_t *)v_out_dma_buf[b] + video_mode.h_visible_area, NO_SYNC, video_mode.h_front_porch);
+    memset((uint8_t *)v_out_dma_buf[b] + video_mode.h_visible_area + video_mode.h_front_porch, H_SYNC, video_mode.h_sync_pulse);
+    memset((uint8_t *)v_out_dma_buf[b] + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, NO_SYNC, video_mode.h_back_porch);
+  }
+
+  // pre-fill H-blank sync buffer (vertical blanking lines with H sync)
+  memset((uint8_t *)v_out_sync_hblank, NO_SYNC, video_mode.h_visible_area + video_mode.h_front_porch);
+  memset((uint8_t *)v_out_sync_hblank + video_mode.h_visible_area + video_mode.h_front_porch, H_SYNC, video_mode.h_sync_pulse);
+  memset((uint8_t *)v_out_sync_hblank + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, NO_SYNC, video_mode.h_back_porch);
+
+  // pre-fill V-sync buffer (vertical sync pulse lines)
+  memset((uint8_t *)v_out_sync_vsync, V_SYNC, video_mode.h_visible_area + video_mode.h_front_porch);
+  memset((uint8_t *)v_out_sync_vsync + video_mode.h_visible_area + video_mode.h_front_porch, VH_SYNC, video_mode.h_sync_pulse);
+  memset((uint8_t *)v_out_sync_vsync + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, V_SYNC, video_mode.h_back_porch);
+
+  // start the line DMA (ch2↔ch3 loop is already running)
   dma_start_channel_mask((1u << dma_ch0));
 }
 
@@ -382,22 +450,29 @@ void stop_dvi()
 {
   // disable IRQ first to prevent handlers from running during cleanup
   irq_set_enabled(DMA_IRQ_0, false);
-
-  // clear the IRQ handler to prevent conflicts with VGA
   irq_remove_handler(DMA_IRQ_0, dma_handler_dvi);
 
-  // stop PIO
+  // stop output PIO (SM0)
   pio_sm_set_enabled(PIO_DVI, SM_DVI, false);
   pio_sm_init(PIO_DVI, SM_DVI, offset, NULL);
   pio_remove_program(PIO_DVI, &pio_dvi_program, offset);
 
-  // cleanup and free DMA channels
+  // stop conv PIO (SM1)
+  pio_sm_set_enabled(PIO_DVI, SM_DVI_CONV, false);
+  pio_sm_init(PIO_DVI, SM_DVI_CONV, offset_conv, NULL);
+  pio_remove_program(PIO_DVI, &pio_dvi_conv_program, offset_conv);
+
+  // cleanup and free all 4 DMA channels
   dma_channel_cleanup(dma_ch0);
   dma_channel_cleanup(dma_ch1);
+  dma_channel_cleanup(dma_ch2);
+  dma_channel_cleanup(dma_ch3);
   dma_channel_unclaim(dma_ch0);
   dma_channel_unclaim(dma_ch1);
+  dma_channel_unclaim(dma_ch2);
+  dma_channel_unclaim(dma_ch3);
 
-  // free individual buffer allocations
+  // free index buffers
   if (v_out_dma_buf[0] != NULL)
   {
     free(v_out_dma_buf[0]);
@@ -408,5 +483,18 @@ void stop_dvi()
   {
     free(v_out_dma_buf[1]);
     v_out_dma_buf[1] = NULL;
+  }
+
+  // free sync buffers
+  if (v_out_sync_hblank != NULL)
+  {
+    free(v_out_sync_hblank);
+    v_out_sync_hblank = NULL;
+  }
+
+  if (v_out_sync_vsync != NULL)
+  {
+    free(v_out_sync_vsync);
+    v_out_sync_vsync = NULL;
   }
 }
