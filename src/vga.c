@@ -346,19 +346,19 @@ void start_vga()
   }
 
   // allocate sync line buffers (pre-filled, never modified)
-  v_out_sync_hblank = calloc(whole_line / 4, sizeof(uint32_t));
+  v_out_sync_hblank = calloc(whole_line, sizeof(uint8_t));
   memset((uint8_t *)v_out_sync_hblank, (NO_SYNC ^ video_mode.sync_polarity), whole_line);
   memset((uint8_t *)v_out_sync_hblank + h_sync_pulse_front, (H_SYNC ^ video_mode.sync_polarity), h_sync_pulse);
 
-  v_out_sync_vsync = calloc(whole_line / 4, sizeof(uint32_t));
+  v_out_sync_vsync = calloc(whole_line, sizeof(uint8_t));
   memset((uint8_t *)v_out_sync_vsync, (V_SYNC ^ video_mode.sync_polarity), whole_line);
   memset((uint8_t *)v_out_sync_vsync + h_sync_pulse_front, (VH_SYNC ^ video_mode.sync_polarity), h_sync_pulse);
 
   // allocate image line buffers (ping-pong, pre-filled with H-blank sync pattern)
-  v_out_dma_buf[0] = calloc(whole_line / 4, sizeof(uint32_t));
+  v_out_dma_buf[0] = calloc(whole_line, sizeof(uint8_t));
   memcpy((uint8_t *)v_out_dma_buf[0], (uint8_t *)v_out_sync_hblank, whole_line);
 
-  v_out_dma_buf[1] = calloc(whole_line / 4, sizeof(uint32_t));
+  v_out_dma_buf[1] = calloc(whole_line, sizeof(uint8_t));
   memcpy((uint8_t *)v_out_dma_buf[1], (uint8_t *)v_out_sync_hblank, whole_line);
 
   // PIO initialization

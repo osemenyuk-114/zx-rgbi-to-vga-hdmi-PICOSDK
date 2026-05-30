@@ -116,6 +116,7 @@
 #define PIO_DVI pio0
 #define DREQ_PIO_DVI DREQ_PIO0_TX0
 #define SM_DVI 0
+#define SM_DVI_CONV (SM_DVI + 1)
 
 // PIO and SM for VGA
 #define PIO_VGA pio0
