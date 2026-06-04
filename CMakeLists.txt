@@ -53,10 +53,15 @@ set(BOARD "BOARD_36LJU22")
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
-set(OSD_MENU_ENABLE ON)
+set(OSD_MENU_ENABLE OFF)
 set(OSD_FF_ENABLE ON)
 
-set(SERIAL_MENU_ENABLE ON)
+set(SERIAL_MENU_ENABLE OFF)
+
+# Force SERIAL_MENU_ENABLE ON when OSD_MENU_ENABLE is OFF
+if(NOT OSD_MENU_ENABLE)
+    set(SERIAL_MENU_ENABLE ON)
+endif()
 
 # Force OSD_FF_ENABLE OFF for 11XGA24 board
 if(BOARD STREQUAL "BOARD_11XGA24")
@@ -89,14 +94,14 @@ add_executable(${EXECUTABLE_NAME})
 
 target_sources(
     ${EXECUTABLE_NAME} PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/src/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/rgb_capture.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/v_buf.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/vga.c 
-    ${CMAKE_CURRENT_LIST_DIR}/src/video_output.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/dvi.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/rgb_capture.c 
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/v_buf.c 
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/vga.c 
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/video_output.c
 )
 
 # Conditionally add serial menu (requires USB stdio)
@@ -109,27 +114,27 @@ endif()
 # Conditionally add OSD common code (used by both MENU and FF)
 if(OSD_MENU_ENABLE OR OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/src/osd.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd/osd.c
     )
 endif()
 
 # Conditionally add OSD menu source files
 if(OSD_MENU_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/src/osd_menu.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd/osd_menu.c
     )
 endif()
 
 # Conditionally add FlashFloppy OSD source files
 if(OSD_FF_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/src/ff_osd.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/osd/ff_osd.c
     )
 endif()
 
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME}
-    ${CMAKE_CURRENT_LIST_DIR}/src/programs.pio
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/programs.pio
 )
 
 # Modify the below lines to enable/disable output over UART/USB
@@ -140,6 +145,8 @@ pico_enable_stdio_usb(${EXECUTABLE_NAME} $<BOOL:${SERIAL_MENU_ENABLE}>)
 # Add the standard include files to the build
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/src/video
+    ${CMAKE_CURRENT_LIST_DIR}/src/osd
 )
 
 # Add any user requested libraries

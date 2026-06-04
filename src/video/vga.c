@@ -422,6 +422,7 @@ void start_vga()
 
   // configure the processor to run dma_handler_vga() when DMA IRQ 0 is asserted
   irq_set_exclusive_handler(DMA_IRQ_0, dma_handler_vga);
+  irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
   irq_set_enabled(DMA_IRQ_0, true);
 
   dma_start_channel_mask((1u << dma_ch0));

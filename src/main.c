@@ -56,10 +56,6 @@ void setup()
 #endif
 
   start_core0 = true;
-
-#ifdef SERIAL_MENU_ENABLE
-  printf("  Starting...\n\n");
-#endif
 }
 
 void loop()

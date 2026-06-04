@@ -60,6 +60,14 @@ For detailed hardware and original software information, see the upstream projec
 
 ## Recent Improvements
 
+### Video Output Stability
+
+- DMA IRQ priority set to highest (`PICO_HIGHEST_IRQ_PRIORITY`) in both VGA and DVI drivers.
+
+### Project Structure
+
+- Source reorganized into subfolders: `video/`, `osd/`.
+
 ### Performance Improvements
 
 - **Video Output Optimization**: Streamlined DMA handling for both VGA and DVI/HDMI output modes, resulting in more efficient memory usage and cleaner code structure.

@@ -461,6 +461,7 @@ void start_dvi()
   // IRQ setup
   dma_channel_set_irq0_enabled(dma_ch1, true);
   irq_set_exclusive_handler(DMA_IRQ_0, dma_handler_dvi);
+  irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
   irq_set_enabled(DMA_IRQ_0, true);
 
   // start the line DMA (ch3↔ch2 loop is already running)

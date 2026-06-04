@@ -11,7 +11,7 @@
 
 // FW_VERSION can be overridden at build time via -DFW_VERSION="..."
 #ifndef FW_VERSION
-#define FW_VERSION "v1.7.2"
+#define FW_VERSION "v1.7.3"
 #endif
 
 #define GIT_REPO_URL_1 "https://github.com/"
@@ -49,12 +49,6 @@
 #define I2C_PIN_SDA 20
 #define I2C_PIN_SCL 21
 #define I2C_INST i2c0
-#define PS2_KBD_ENABLE
-#define PS2_PIN_DATA 1
-#define PS2_PIN_CLK 0
-#define CH446Q_PIN_DATA 2
-#define CH446Q_PIN_CLK 3
-#define CH446Q_PIN_STB 4
 #elif defined(BOARD_11XGA24)
 #define HW_VERSION "11XGA24"
 #define DVI_PINS_REVERSED // DVI pins are in reverse order (D0 is the last pin, D5 is the first)
@@ -82,12 +76,6 @@
 #define I2C_PIN_SDA 20
 #define I2C_PIN_SCL 21
 #define I2C_INST i2c0
-#define PS2_KBD_ENABLE
-#define PS2_PIN_DATA 29
-#define PS2_PIN_CLK 28
-#define CH446Q_PIN_DATA 7
-#define CH446Q_PIN_CLK 26
-#define CH446Q_PIN_STB 27
 #else /* 09LJV23 */
 #define HW_VERSION "09LJV23"
 #define VIDEO_OUTPUT_AUTO_DETECT
