@@ -53,10 +53,10 @@ set(BOARD "BOARD_36LJU22")
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
-set(OSD_MENU_ENABLE OFF)
+set(OSD_MENU_ENABLE ON)
 set(OSD_FF_ENABLE ON)
 
-set(SERIAL_MENU_ENABLE OFF)
+set(SERIAL_MENU_ENABLE ON)
 
 # Force SERIAL_MENU_ENABLE ON when OSD_MENU_ENABLE is OFF
 if(NOT OSD_MENU_ENABLE)
