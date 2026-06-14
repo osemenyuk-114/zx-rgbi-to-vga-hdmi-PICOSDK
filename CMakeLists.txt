@@ -17,7 +17,8 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 # =============================================================================
 
 # Board variant (pass -DBOARD=BOARD_XXX to override)
-# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_11XGA24_1, BOARD_11XGA24_2,
+# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040ZERO
+#            BOARD_11XGA24_1, BOARD_11XGA24_2,
 #            BOARD_25LEO25, BOARD_09LJV23
 set(BOARD "BOARD_38LJE24" CACHE STRING "Board variant")
 
@@ -36,6 +37,11 @@ set(USB_KBD_ENABLE ON CACHE BOOL "Enable USB keyboard")
 # =============================================================================
 # END OF CONFIGURATION
 # =============================================================================
+
+# Force USE_PICO2 OFF for RP2040-based boards (no RP2350 variant)
+if(BOARD STREQUAL "BOARD_RP2040ZERO")
+    set(USE_PICO2 OFF CACHE BOOL "Force USE_PICO2 OFF for RP2040ZERO" FORCE)
+endif()
 
 # Select Pico board type based on board variant (FORCE overrides cached value)
 if(USE_PICO2)
@@ -73,11 +79,15 @@ pico_sdk_init()
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
+# Force keyboard support OFF for RP2040ZERO and 11XGA24 boards due to pin conflicts with OSD and/or lack of available pins
+if(BOARD STREQUAL "BOARD_RP2040ZERO" OR BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
+    set(PS2_KBD_ENABLE OFF CACHE BOOL "Force PS/2 keyboard OFF for RP2040ZERO and 11XGA24 boards" FORCE)
+    set(USB_KBD_ENABLE OFF CACHE BOOL "Force USB keyboard OFF for RP2040ZERO and 11XGA24 boards" FORCE)
+endif()
+
 # Force OSD_FF_ENABLE OFF for 11XGA24 board
 if(BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
     set(OSD_FF_ENABLE OFF CACHE BOOL "Force FlashFloppy I2C OSD OFF for 11XGA24" FORCE)
-    set(PS2_KBD_ENABLE OFF)
-    set(USB_KBD_ENABLE OFF)
 endif()
 
 # Force SERIAL_MENU_ENABLE ON when OSD_MENU_ENABLE is OFF

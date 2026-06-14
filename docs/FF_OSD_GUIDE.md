@@ -29,6 +29,7 @@ The FF OSD interface uses `I2C0`. Pin assignments depend on the board variant:
 |------------|--------|--------|
 | 36LJU22    | GPIO16 | GPIO17 |
 | 38LJE24    | GPIO20 | GPIO21 |
+| RP2040ZERO | GPIO20 | GPIO21 |
 | 25LEO25    | GPIO20 | GPIO21 |
 | 09LJV23    | GPIO16 | GPIO17 |
 
