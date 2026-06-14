@@ -2,6 +2,17 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "CMake Configure",
+            "type": "process",
+            "command": "cmake",
+            "args": ["-B", "${workspaceFolder}/build", "-G", "Ninja", "--fresh"],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "Compile Project",
             "type": "process",
             "isBuildCommand": true,

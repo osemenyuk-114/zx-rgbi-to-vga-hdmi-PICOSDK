@@ -54,6 +54,15 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DBOARD=${{ matrix.board }} -DUSE_PICO2=OFF
           cmake --build build --parallel $(nproc)
 
+      - name: Rename firmware for release
+        run: |
+          BOARD_SHORT=$(echo "${{ matrix.board }}" | sed 's/^BOARD_//')
+          VERSION_NO_V=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h | sed 's/^v//')
+          BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
+          FW_NAME="ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${VERSION_NO_V}-${BUILD_ID}"
+          mv build/ZX_RGBI_TO_VGA_HDMI.uf2 "build/${FW_NAME}.uf2"
+          echo "Renamed to ${FW_NAME}.uf2"
+
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:

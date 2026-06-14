@@ -20,10 +20,10 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 # Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040ZERO
 #            BOARD_11XGA24_1, BOARD_11XGA24_2,
 #            BOARD_25LEO25, BOARD_09LJV23
-set(BOARD "BOARD_38LJE24" CACHE STRING "Board variant")
+set(BOARD "BOARD_36LJU22" CACHE STRING "Board variant")
 
 # Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)
-option(USE_PICO2 "Build for Raspberry Pi Pico 2 (RP2350)" OFF)
+set(USE_PICO2 OFF CACHE BOOL "Build for Raspberry Pi Pico 2 (RP2350)")
 
 # Feature toggles
 set(OSD_MENU_ENABLE ON CACHE BOOL "Enable OSD menu")
@@ -278,20 +278,8 @@ target_link_options(${EXECUTABLE_NAME} PRIVATE
     -Wl,--print-memory-usage
 )
 
-# --- Output filename: ZX_RGBI_TO_VGA_HDMI-<board>[-PICO2]-<version> ---
-string(REPLACE "BOARD_" "" BOARD_SHORT "${BOARD}")
-file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/src/g_config.h" _fw_ver_line REGEX "#define FW_VER ")
-string(REGEX MATCH "\"([^\"]+)\"" _ "${_fw_ver_line}")
-string(REGEX REPLACE "^v" "" FW_VER_NO_V "${CMAKE_MATCH_1}")
-
-if(USE_PICO2)
-    set(FW_OUTPUT_NAME "ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-PICO2-${FW_VER_NO_V}")
-else()
-    set(FW_OUTPUT_NAME "ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${FW_VER_NO_V}")
-endif()
-
-set_target_properties(${EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "${FW_OUTPUT_NAME}")
-message(STATUS "Output firmware: ${FW_OUTPUT_NAME}.uf2")
+# Output filename is fixed; CI renames per board/version during release
+message(STATUS "Output firmware: ${EXECUTABLE_NAME}.uf2")
 
 pico_add_extra_outputs(${EXECUTABLE_NAME})
 
