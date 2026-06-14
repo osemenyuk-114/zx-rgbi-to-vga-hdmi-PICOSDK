@@ -42,12 +42,9 @@ jobs:
         id: fw_version
         run: |
           BASE_VERSION=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h)
-          BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
-          FULL_VERSION="${BASE_VERSION}-${BUILD_ID}"
-          VERSION_NO_V="${FULL_VERSION#v}"
-          echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
+          VERSION_NO_V="${BASE_VERSION#v}"
+          echo "version=$BASE_VERSION" >> $GITHUB_OUTPUT
           echo "version_no_v=$VERSION_NO_V" >> $GITHUB_OUTPUT
-          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build firmware
         run: |
@@ -57,11 +54,7 @@ jobs:
       - name: Rename firmware for release
         run: |
           BOARD_SHORT=$(echo "${{ matrix.board }}" | sed 's/^BOARD_//')
-          VERSION_NO_V=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h | sed 's/^v//')
-          BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
-          FW_NAME="ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${VERSION_NO_V}-${BUILD_ID}"
-          mv build/ZX_RGBI_TO_VGA_HDMI.uf2 "build/${FW_NAME}.uf2"
-          echo "Renamed to ${FW_NAME}.uf2"
+          mv build/ZX_RGBI_TO_VGA_HDMI.uf2 "build/ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${{ steps.fw_version.outputs.version_no_v }}.uf2"
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
@@ -85,10 +78,7 @@ jobs:
         id: fw_version
         run: |
           BASE_VERSION=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h)
-          BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
-          FULL_VERSION="${BASE_VERSION}-${BUILD_ID}"
-          echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
-          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$BASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all firmware artifacts
         uses: actions/download-artifact@v4
@@ -122,7 +112,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
-          name: Latest Development Build (${{ steps.fw_version.outputs.base_version }})
+          name: Latest Development Build (${{ steps.fw_version.outputs.version }})
           body: |
             This is an automatically updated release that always points to the latest commit on the main branch.
             
