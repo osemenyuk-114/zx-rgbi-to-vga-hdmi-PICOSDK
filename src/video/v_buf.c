@@ -33,11 +33,15 @@ void *__not_in_flash_func(get_v_buf_out)()
 
   // Try next buffer
   uint8_t next = next_buf_idx(v_buf_out_idx);
+
   __dmb();
+
   if (!buf_is_free[next]) // Buffer has fresh data
   {
     buf_is_free[v_buf_out_idx] = true; // Mark current as free for capture
+
     __dmb();
+
     v_buf_out_idx = next;
     return v_bufs[next];
   }
@@ -47,7 +51,9 @@ void *__not_in_flash_func(get_v_buf_out)()
   if (!buf_is_free[next]) // Buffer has fresh data
   {
     buf_is_free[v_buf_out_idx] = true; // Mark current as free for capture
+
     __dmb();
+
     v_buf_out_idx = next;
     return v_bufs[next];
   }
@@ -62,8 +68,11 @@ void *__not_in_flash_func(get_v_buf_in)()
     return v_bufs[0];
 
   first_frame = false;
+
   __dmb();
+
   buf_is_free[v_buf_in_idx] = false; // Mark current buffer as ready for display
+
   __dmb();
 
   // Find next free buffer for capture

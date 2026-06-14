@@ -143,6 +143,7 @@ void save_settings(settings_t *settings)
   check_settings(settings);
 
   stop_core1 = true;
+
   __dmb();
 
   while (!core1_inactive)
@@ -159,6 +160,7 @@ void save_settings(settings_t *settings)
   restart_capture = true;
 
   __dmb();
+
   stop_core1 = false;
   core1_inactive = false;
 }

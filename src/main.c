@@ -166,6 +166,7 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
   if (stop_core1)
   {
     core1_inactive = true;
+
     __dmb();
 
     uint32_t ints = save_and_disable_interrupts();
