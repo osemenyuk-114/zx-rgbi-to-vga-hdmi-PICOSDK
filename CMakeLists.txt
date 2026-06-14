@@ -39,7 +39,7 @@ set(USB_KBD_ENABLE ON CACHE BOOL "Enable USB keyboard")
 # =============================================================================
 
 # Force USE_PICO2 OFF for RP2040-based boards (no RP2350 variant)
-if(BOARD STREQUAL "BOARD_RP2040ZERO")
+if(BOARD STREQUAL "BOARD_RP2040ZERO" OR BOARD STREQUAL "BOARD_25LEO25")
     set(USE_PICO2 OFF CACHE BOOL "Force USE_PICO2 OFF for RP2040ZERO" FORCE)
 endif()
 
