@@ -13,6 +13,7 @@ For detailed hardware and original software information, see the upstream projec
 - [OSD Menu Guide](docs/OSD_MENU_GUIDE.md) - local button controls, menu tree, and tuning workflow.
 - [FF OSD Guide](docs/FF_OSD_GUIDE.md) - Gotek/FlashFloppy I2C wiring, protocol modes, and host configuration.
 - [VGA Timings](docs/VGA_TIMINGS.md) - supported VGA/DVI timing tables.
+- [Keyboard Guide](docs/KEYBOARD_GUIDE.md) - PS/2 and USB keyboard support, OSD and Gotek control, ZX Spectrum key mapping.
 
 ---
 
@@ -25,6 +26,13 @@ For detailed hardware and original software information, see the upstream projec
   - HDMI (DVI) resolutions: 640×480 @60Hz and 720×576 @50Hz.
   - Optional scanline effect on the VGA output at higher resolutions for a retro look.
   - "NO SIGNAL" message when no input is detected.
+- **Keyboard Input:**
+  - PS/2 keyboard support (PIO-based, IRQ-driven).
+  - USB keyboard support (TinyUSB Host, boot protocol).
+  - Full ZX Spectrum keyboard emulation via CH446Q analog switch matrix.
+  - OSD menu control via keyboard (F11, arrows, Enter, Esc).
+  - Gotek/FlashFloppy control via keyboard (F12 toggle, arrows, Enter).
+  - Visual indicator: FF OSD text turns Cyan when keyboard controls Gotek.
 - **On-Screen Display (OSD) Menu:**
   - Full-featured graphical menu system overlaid on video output.
   - Three-button control (UP, DOWN, SEL) with live tuning and save-to-flash support.
@@ -60,13 +68,24 @@ For detailed hardware and original software information, see the upstream projec
 
 ## Recent Improvements
 
+### Keyboard Support
+
+- **PS/2 Keyboard**: PIO-based driver with IRQ-driven scancode decoding.
+- **USB Keyboard**: TinyUSB Host boot keyboard driver with O(1) HID→universal key mapping.
+- **ZX Spectrum Emulation**: Universal→ZX 8×5 matrix mapping via CH446Q analog switch.
+- **OSD Control**: F11 toggles menu, arrows/Enter/Esc navigate. Controlled repeat (400ms delay, 80ms rate).
+- **Gotek Control**: F12 toggles keyboard→Gotek mode (arrows→LEFT/RIGHT, Enter→SELECT). Cyan text indicator.
+- See [Keyboard Guide](docs/KEYBOARD_GUIDE.md) for full details.
+
 ### Video Output Stability
 
 - DMA IRQ priority set to highest (`PICO_HIGHEST_IRQ_PRIORITY`) in both VGA and DVI drivers.
+- Prevents USB Host ISR from blocking video output on Core 0.
+- USB keyboard task throttled to 500µs interval.
 
 ### Project Structure
 
-- Source reorganized into subfolders: `video/`, `osd/`.
+- Source reorganized into subfolders: `video/`, `osd/`, `kbd/`, `usb/`.
 
 ### Performance Improvements
 
@@ -76,6 +95,9 @@ For detailed hardware and original software information, see the upstream projec
 ### Code Quality
 
 - **Settings Integrity**: CRC-32 validation on saved settings — corrupted or uninitialized flash data is detected on boot and automatically replaced with safe defaults.
+- **Memory Safety**: All video buffer allocations are checked — `watchdog_reboot()` on allocation failure prevents undefined behavior.
+- **Dual-Core Synchronization**: Memory barriers (`__dmb()`) on all cross-core flag variables (`stop_core1`, `core1_inactive`, `buf_is_free[]`) ensure correct operation on both RP2040 (Cortex-M0+) and RP2350 (Cortex-M33 with caches).
+- **Clean Video Mode Switching**: ISR state variables (`y`, `scr_buffer`, `active_buf_idx`) are reset on `stop_dvi()`/`stop_vga()`, eliminating first-frame glitches after mode changes.
 - **FF OSD Integration**: Added dedicated FlashFloppy/Gotek I2C OSD support, including protocol switching and separate documentation for setup and usage.
 - **FF OSD Runtime Control**: FF OSD can be enabled/disabled and the protocol switched at runtime; both operations trigger a full I2C re-initialization on the next Core 1 loop cycle.
 - **Memory Optimization**: Reduced unnecessary memory allocations and pointer complexity in video output modules.

@@ -11,10 +11,40 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
-set(PICO_BOARD pico CACHE STRING "Board type")
 
-# Initialize pico_sdk from installed location
-# (note this can come from environment, CMake cache etc)
+# =============================================================================
+# CONFIGURATION — edit these settings or pass via -D on the command line
+# =============================================================================
+
+# Board variant (pass -DBOARD=BOARD_XXX to override)
+# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_11XGA24_1, BOARD_11XGA24_2,
+#            BOARD_25LEO25, BOARD_09LJV23
+set(BOARD "BOARD_38LJE24" CACHE STRING "Board variant")
+
+# Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)
+option(USE_PICO2 "Build for Raspberry Pi Pico 2 (RP2350)" OFF)
+
+# Feature toggles
+set(OSD_MENU_ENABLE ON CACHE BOOL "Enable OSD menu")
+set(OSD_FF_ENABLE ON CACHE BOOL "Enable FlashFloppy I2C OSD")
+set(SERIAL_MENU_ENABLE ON CACHE BOOL "Enable serial terminal menu")
+
+# Keyboard support
+set(PS2_KBD_ENABLE ON CACHE BOOL "Enable PS/2 keyboard")
+set(USB_KBD_ENABLE ON CACHE BOOL "Enable USB keyboard")
+
+# =============================================================================
+# END OF CONFIGURATION
+# =============================================================================
+
+# Select Pico board type based on board variant (FORCE overrides cached value)
+if(USE_PICO2)
+    set(PICO_BOARD pico2 CACHE STRING "Board type" FORCE)
+    set(PICO_PLATFORM rp2350-arm-s CACHE STRING "Target platform" FORCE)
+else()  
+    set(PICO_BOARD pico CACHE STRING "Board type" FORCE)
+    set(PICO_PLATFORM rp2040 CACHE STRING "Target platform" FORCE)
+endif()
 
 # == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
 if(WIN32)
@@ -40,32 +70,24 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Build options — override via CMake presets or -D flags
-# These control which source files are compiled and which libraries are linked
-
-# Board variant — uncomment exactly one
-set(BOARD "BOARD_36LJU22")
-# set(BOARD "BOARD_38LJE24")
-# set(BOARD "BOARD_11XGA24")
-# set(BOARD "BOARD_25LEO25")
-# set(BOARD "BOARD_09LJV23")
-
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
-set(OSD_MENU_ENABLE ON)
-set(OSD_FF_ENABLE ON)
-
-set(SERIAL_MENU_ENABLE ON)
+# Force OSD_FF_ENABLE OFF for 11XGA24 board
+if(BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
+    set(OSD_FF_ENABLE OFF CACHE BOOL "Force FlashFloppy I2C OSD OFF for 11XGA24" FORCE)
+    set(PS2_KBD_ENABLE OFF)
+    set(USB_KBD_ENABLE OFF)
+endif()
 
 # Force SERIAL_MENU_ENABLE ON when OSD_MENU_ENABLE is OFF
 if(NOT OSD_MENU_ENABLE)
     set(SERIAL_MENU_ENABLE ON)
 endif()
 
-# Force OSD_FF_ENABLE OFF for 11XGA24 board
-if(BOARD STREQUAL "BOARD_11XGA24")
-    set(OSD_FF_ENABLE OFF CACHE BOOL "Force FlashFloppy I2C OSD OFF for 11XGA24" FORCE)
+# USB Host mode and USB Device stdio are mutually exclusive
+if(USB_KBD_ENABLE)
+    set(SERIAL_MENU_ENABLE OFF)
 endif()
 
 # Automatically fetch pico_i2c_slave when FlashFloppy OSD is enabled.
@@ -132,21 +154,51 @@ if(OSD_FF_ENABLE)
     )
 endif()
 
+# Conditionally add keyboard source files
+if(PS2_KBD_ENABLE OR USB_KBD_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/kbd.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/osd_kbd.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/zx_kbd.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/ch446q.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/epm3256.c
+    )
+endif()
+
+if(PS2_KBD_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/ps2_kbd.c
+    )
+endif()
+
+if(USB_KBD_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/kbd/usb_kbd.c
+    )
+endif()
+
 # Generate PIO header
 pico_generate_pio_header(${EXECUTABLE_NAME}
-    ${CMAKE_CURRENT_LIST_DIR}/src/video/programs.pio
+    ${CMAKE_CURRENT_LIST_DIR}/src/video/video.pio
+    ${CMAKE_CURRENT_LIST_DIR}/src/kbd/kbd.pio
 )
 
 # Modify the below lines to enable/disable output over UART/USB
-# Note: Always enable stdio_usb library linking (for headers) but disable init when not needed
 pico_enable_stdio_uart(${EXECUTABLE_NAME} 0)
-pico_enable_stdio_usb(${EXECUTABLE_NAME} $<BOOL:${SERIAL_MENU_ENABLE}>)
+if(USB_KBD_ENABLE)
+    # USB port is in host mode — disable device-mode stdio entirely
+    pico_enable_stdio_usb(${EXECUTABLE_NAME} 0)
+else()
+    pico_enable_stdio_usb(${EXECUTABLE_NAME} $<BOOL:${SERIAL_MENU_ENABLE}>)
+endif()
 
 # Add the standard include files to the build
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CMAKE_CURRENT_LIST_DIR}/src/video
     ${CMAKE_CURRENT_LIST_DIR}/src/osd
+    ${CMAKE_CURRENT_LIST_DIR}/src/kbd
+    ${CMAKE_CURRENT_LIST_DIR}/src/usb
 )
 
 # Add any user requested libraries
@@ -159,10 +211,17 @@ target_link_libraries(${EXECUTABLE_NAME}
     pico_stdlib
 )
 
-# Always link USB stdio library for headers (even when disabled)
-# This allows code to include pico/stdio_usb.h without conditional compilation
-if(NOT SERIAL_MENU_ENABLE)
+# Link USB stdio library for headers when not in USB host mode
+if(NOT SERIAL_MENU_ENABLE AND NOT USB_KBD_ENABLE)
     target_link_libraries(${EXECUTABLE_NAME} pico_stdio_usb)
+endif()
+
+# Conditionally link TinyUSB host library for USB keyboard
+if(USB_KBD_ENABLE)
+    target_link_libraries(${EXECUTABLE_NAME}
+        tinyusb_host
+        tinyusb_board
+    )
 endif()
 
 # Conditionally link I2C libraries for FlashFloppy OSD
@@ -191,15 +250,38 @@ if(SERIAL_MENU_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE SERIAL_MENU_ENABLE)
 endif()
 
-# Add firmware version definition if provided via CMake
-if(DEFINED FW_VERSION)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE FW_VERSION="${FW_VERSION}")
+# Keyboard compile definitions
+if(PS2_KBD_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE PS2_KBD_ENABLE)
+endif()
+
+if(USB_KBD_ENABLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+        USB_KBD_ENABLE
+        NO_USB
+        CFG_TUSB_CONFIG_FILE="tusb_config_host.h"
+    )
 endif()
 
 # Add linker flag to print memory usage
 target_link_options(${EXECUTABLE_NAME} PRIVATE
     -Wl,--print-memory-usage
 )
+
+# --- Output filename: ZX_RGBI_TO_VGA_HDMI-<board>[-PICO2]-<version> ---
+string(REPLACE "BOARD_" "" BOARD_SHORT "${BOARD}")
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/src/g_config.h" _fw_ver_line REGEX "#define FW_VER ")
+string(REGEX MATCH "\"([^\"]+)\"" _ "${_fw_ver_line}")
+string(REGEX REPLACE "^v" "" FW_VER_NO_V "${CMAKE_MATCH_1}")
+
+if(USE_PICO2)
+    set(FW_OUTPUT_NAME "ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-PICO2-${FW_VER_NO_V}")
+else()
+    set(FW_OUTPUT_NAME "ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${FW_VER_NO_V}")
+endif()
+
+set_target_properties(${EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "${FW_OUTPUT_NAME}")
+message(STATUS "Output firmware: ${FW_OUTPUT_NAME}.uf2")
 
 pico_add_extra_outputs(${EXECUTABLE_NAME})
 

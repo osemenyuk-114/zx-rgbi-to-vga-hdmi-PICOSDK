@@ -5,81 +5,91 @@ on:
     branches: [ main ]
 
 jobs:
-  update-latest-tag:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - BOARD_36LJU22
+          - BOARD_38LJE24
+          - BOARD_RP2040ZERO
+          # - BOARD_11XGA24_1
+          # - BOARD_11XGA24_2
+          # - BOARD_25LEO25
+          # - BOARD_09LJV23
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract SDK versions from CMakeLists.txt
+        id: sdk_versions
+        run: |
+          SDK_VERSION=$(grep -oP 'set\(sdkVersion \K[^\)]+' CMakeLists.txt)
+          echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Pico SDK
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+          cd $HOME
+          git clone --depth 1 https://github.com/raspberrypi/pico-sdk.git --branch ${{ steps.sdk_versions.outputs.sdk_version }}
+          cd pico-sdk && git submodule update --init
+          echo "PICO_SDK_PATH=$HOME/pico-sdk" >> $GITHUB_ENV
+
+      - name: Extract firmware version
+        id: fw_version
+        run: |
+          BASE_VERSION=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h)
+          BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
+          FULL_VERSION="${BASE_VERSION}-${BUILD_ID}"
+          VERSION_NO_V="${FULL_VERSION#v}"
+          echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
+          echo "version_no_v=$VERSION_NO_V" >> $GITHUB_OUTPUT
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build firmware
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBOARD=${{ matrix.board }} -DUSE_PICO2=OFF
+          cmake --build build --parallel $(nproc)
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fw-${{ matrix.board }}
+          path: build/*.uf2
+          retention-days: 1
+
+  release:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Extract SDK versions from CMakeLists.txt
-        id: sdk_versions
-        run: |
-          SDK_VERSION=$(grep -oP 'set\(sdkVersion \K[^\)]+' CMakeLists.txt)
-          TOOLCHAIN_VERSION=$(grep -oP 'set\(toolchainVersion \K[^\)]+' CMakeLists.txt)
-          PICOTOOL_VERSION=$(grep -oP 'set\(picotoolVersion \K[^\)]+' CMakeLists.txt)
-          
-          echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
-          echo "toolchain_version=$TOOLCHAIN_VERSION" >> $GITHUB_OUTPUT
-          echo "picotool_version=$PICOTOOL_VERSION" >> $GITHUB_OUTPUT
-          echo "SDK Version: $SDK_VERSION"
-          echo "Toolchain Version: $TOOLCHAIN_VERSION"
-          echo "Picotool Version: $PICOTOOL_VERSION"
-      
-      - name: Set up Pico SDK
-        run: |
-          # Install dependencies
-          sudo apt update
-          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
-          
-          # Clone Pico SDK
-          cd $HOME
-          git clone https://github.com/raspberrypi/pico-sdk.git --branch ${{ steps.sdk_versions.outputs.sdk_version }}
-          cd pico-sdk
-          git submodule update --init
-          echo "PICO_SDK_PATH=$HOME/pico-sdk" >> $GITHUB_ENV
-      
+
       - name: Extract firmware version
         id: fw_version
         run: |
-          # Extract base version from g_config.h
-          BASE_VERSION=$(grep -oP '#define FW_VERSION "\K[^"]+' src/g_config.h)
-          
-          # Build identifier: Short commit SHA (first 7 chars)
+          BASE_VERSION=$(grep -oP '#define FW_VER "\K[^"]+' src/g_config.h)
           BUILD_ID=$(printf '%.7s' "${{ github.sha }}")
-          
-          # Full version
           FULL_VERSION="${BASE_VERSION}-${BUILD_ID}"
-          
-          # Version for filename
-          FULL_VERSION_NO_V="${FULL_VERSION#v}"
-          
           echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
-          echo "version_no_v=$FULL_VERSION_NO_V" >> $GITHUB_OUTPUT
           echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
-          echo "Firmware Version: $FULL_VERSION"
-      
-      - name: Build firmware
-        run: |
-          # Create build directory
-          mkdir -p build
-          cd build
-          
-          # Configure CMake with custom version string
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico -DFW_VERSION="${{ steps.fw_version.outputs.version }}"
-          
-          # Build
-          make -j$(nproc)
-      
-      - name: Rename firmware file
-        run: |
-          FW_VERSION_NO_V="${{ steps.fw_version.outputs.version_no_v }}"
-          cp build/ZX_RGBI_TO_VGA_HDMI.uf2 ZX_RGBI_TO_VGA_HDMI-${FW_VERSION_NO_V}.uf2
-          echo "Created: ZX_RGBI_TO_VGA_HDMI-${FW_VERSION_NO_V}.uf2"
+
+      - name: Download all firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: firmware
+          pattern: fw-*
+          merge-multiple: true
+
+      - name: List firmware files
+        run: ls -la firmware/
 
       - name: Update latest tag
         run: |
@@ -90,7 +100,6 @@ jobs:
 
       - name: Delete previous firmware assets
         run: |
-          # Get all assets from the 'latest' release and delete .uf2 files
           gh release view latest --json assets --jq '.assets[].name' 2>/dev/null | \
             grep '\.uf2$' | \
             while read -r asset; do
@@ -113,8 +122,12 @@ jobs:
             **Date:** ${{ github.event.head_commit.timestamp }}
             **Message:** ${{ github.event.head_commit.message }}
             
+            ### Board Variants
+            Each `.uf2` file is named `ZX_RGBI_TO_VGA_HDMI-<board>-<version>.uf2`.
+            Download the file matching your board revision.
+            
             ### Installation
-            1. Download the `.uf2` file below
+            1. Download the `.uf2` file for your board
             2. Hold the BOOTSEL button on your Raspberry Pi Pico while connecting USB
             3. Drag and drop the `.uf2` file onto the RPI-RP2 drive
             
@@ -124,7 +137,6 @@ jobs:
             ```
           draft: false
           prerelease: false
-          files: |
-            ZX_RGBI_TO_VGA_HDMI-${{ steps.fw_version.outputs.version_no_v }}.uf2
+          files: firmware/*.uf2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

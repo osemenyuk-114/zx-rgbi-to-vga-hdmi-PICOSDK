@@ -14,6 +14,8 @@
 #include "ff_osd.h"
 #endif
 
+#ifdef SERIAL_MENU_ENABLE // Compile serial menu code only if enabled in the configuration
+
 // External variables that need to be accessed
 extern settings_t settings;
 extern video_out_type_t active_video_output;
@@ -493,7 +495,13 @@ void print_ff_osd_v_position()
 
 void print_ff_osd_h_position()
 {
-    const char *names[] = {"left", "left-center", "center", "center-right", "right"};
+    const char *names[] = {
+        "left",
+        "left-center",
+        "center",
+        "center-right",
+        "right",
+    };
     uint8_t hp = settings.ff_osd_config.h_position;
     const char *name = (hp >= 1 && hp <= 5) ? names[hp - 1] : "center";
     printf("  Horizontal position ........ ");
@@ -1464,3 +1472,5 @@ void handle_serial_menu()
         }
     }
 }
+
+#endif
