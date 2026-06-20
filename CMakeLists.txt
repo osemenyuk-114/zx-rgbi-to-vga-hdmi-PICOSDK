@@ -17,39 +17,38 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 # =============================================================================
 
 # Board variant (pass -DBOARD=BOARD_XXX to override)
-# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040ZERO
+# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040_ZERO
 #            BOARD_11XGA24_1, BOARD_11XGA24_2,
-#            BOARD_25LEO25, BOARD_09LJV23
-set(BOARD "BOARD_36LJU22" CACHE STRING "Board variant")
+#            BOARD_LEOV3, BOARD_LEOV3_2040BT 
+#            BOARD_09LJV23
+#
+set(BOARD "BOARD_36LJU22")
+# set(BOARD "BOARD_38LJE24")
+# set(BOARD "BOARD_RP2040_ZERO")
+# set(BOARD "BOARD_11XGA24_1")
+# set(BOARD "BOARD_11XGA24_2")
+# set(BOARD "BOARD_LEOV3")
+# set(BOARD "BOARD_LEOV3_2040BT")
 
 # Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)
-set(USE_PICO2 OFF CACHE BOOL "Build for Raspberry Pi Pico 2 (RP2350)")
-
-# Feature toggles
-set(OSD_MENU_ENABLE ON CACHE BOOL "Enable OSD menu")
-set(OSD_FF_ENABLE ON CACHE BOOL "Enable FlashFloppy I2C OSD")
-set(SERIAL_MENU_ENABLE ON CACHE BOOL "Enable serial terminal menu")
-
-# Keyboard support
-set(PS2_KBD_ENABLE ON CACHE BOOL "Enable PS/2 keyboard")
-set(USB_KBD_ENABLE ON CACHE BOOL "Enable USB keyboard")
+set(USE_PICO2 OFF)
 
 # =============================================================================
 # END OF CONFIGURATION
 # =============================================================================
 
 # Force USE_PICO2 OFF for RP2040-based boards (no RP2350 variant)
-if(BOARD STREQUAL "BOARD_RP2040ZERO" OR BOARD STREQUAL "BOARD_25LEO25")
-    set(USE_PICO2 OFF CACHE BOOL "Force USE_PICO2 OFF for RP2040ZERO" FORCE)
+if(BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_LEOV3" OR BOARD STREQUAL "BOARD_LEOV3_2040BT")
+    set(USE_PICO2 OFF)
 endif()
 
 # Select Pico board type based on board variant (FORCE overrides cached value)
 if(USE_PICO2)
-    set(PICO_BOARD pico2 CACHE STRING "Board type" FORCE)
-    set(PICO_PLATFORM rp2350-arm-s CACHE STRING "Target platform" FORCE)
+    set(PICO_BOARD pico2)
+    set(PICO_PLATFORM rp2350-arm-s)
 else()  
-    set(PICO_BOARD pico CACHE STRING "Board type" FORCE)
-    set(PICO_PLATFORM rp2040 CACHE STRING "Target platform" FORCE)
+    set(PICO_BOARD pico)
+    set(PICO_PLATFORM rp2040)
 endif()
 
 # == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
@@ -76,28 +75,31 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# ====================================================================================
 # Pass board definition to compiler
 add_compile_definitions(${BOARD})
 
-# Force keyboard support OFF for RP2040ZERO and 11XGA24 boards due to pin conflicts with OSD and/or lack of available pins
-if(BOARD STREQUAL "BOARD_RP2040ZERO" OR BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
-    set(PS2_KBD_ENABLE OFF CACHE BOOL "Force PS/2 keyboard OFF for RP2040ZERO and 11XGA24 boards" FORCE)
-    set(USB_KBD_ENABLE OFF CACHE BOOL "Force USB keyboard OFF for RP2040ZERO and 11XGA24 boards" FORCE)
-endif()
-
-# Force OSD_FF_ENABLE OFF for 11XGA24 board
-if(BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
-    set(OSD_FF_ENABLE OFF CACHE BOOL "Force FlashFloppy I2C OSD OFF for 11XGA24" FORCE)
-endif()
-
-# Force SERIAL_MENU_ENABLE ON when OSD_MENU_ENABLE is OFF
-if(NOT OSD_MENU_ENABLE)
+# Set board options based on board variant
+if(BOARD STREQUAL "BOARD_36LJU22" OR BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_09LJV23")
+    set(OSD_MENU_ENABLE ON)
+    set(OSD_FF_ENABLE ON)
+    set(PS2_KBD_ENABLE OFF)
+    set(USB_KBD_ENABLE OFF)
     set(SERIAL_MENU_ENABLE ON)
-endif()
-
-# USB Host mode and USB Device stdio are mutually exclusive
-if(USB_KBD_ENABLE)
+elseif(BOARD STREQUAL "BOARD_38LJE24" OR BOARD STREQUAL "BOARD_LEOV3" OR BOARD STREQUAL "BOARD_LEOV3_2040BT")
+    set(OSD_MENU_ENABLE ON)
+    set(OSD_FF_ENABLE ON)
+    set(PS2_KBD_ENABLE ON)
+    set(USB_KBD_ENABLE ON)
     set(SERIAL_MENU_ENABLE OFF)
+elseif(BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
+    set(OSD_MENU_ENABLE ON)
+    set(OSD_FF_ENABLE OFF)
+    set(PS2_KBD_ENABLE OFF)
+    set(USB_KBD_ENABLE OFF)
+    set(SERIAL_MENU_ENABLE ON)
+else()
+    message(FATAL_ERROR "Unsupported board variant: ${BOARD}")
 endif()
 
 # Automatically fetch pico_i2c_slave when FlashFloppy OSD is enabled.
@@ -129,6 +131,7 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/g_config.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
+    ${CMAKE_CURRENT_LIST_DIR}/src/led.c
     ${CMAKE_CURRENT_LIST_DIR}/src/video/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/video/rgb_capture.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video/v_buf.c 
@@ -191,6 +194,7 @@ endif()
 pico_generate_pio_header(${EXECUTABLE_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/src/video/video.pio
     ${CMAKE_CURRENT_LIST_DIR}/src/kbd/kbd.pio
+    ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio
 )
 
 # Modify the below lines to enable/disable output over UART/USB
@@ -213,7 +217,8 @@ target_include_directories(${EXECUTABLE_NAME} PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(${EXECUTABLE_NAME}
-    hardware_pio 
+    hardware_pio
+    hardware_pwm 
     hardware_dma 
     hardware_flash 
     pico_multicore 
@@ -221,8 +226,8 @@ target_link_libraries(${EXECUTABLE_NAME}
     pico_stdlib
 )
 
-# Link USB stdio library for headers when not in USB host mode
-if(NOT SERIAL_MENU_ENABLE AND NOT USB_KBD_ENABLE)
+# Link USB stdio library when serial menu is active (needs USB device mode)
+if(SERIAL_MENU_ENABLE)
     target_link_libraries(${EXECUTABLE_NAME} pico_stdio_usb)
 endif()
 
@@ -255,7 +260,6 @@ if(OSD_FF_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE OSD_FF_ENABLE)
 endif()
 
-# Define SERIAL_MENU_ENABLE for source code when option is enabled
 if(SERIAL_MENU_ENABLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE SERIAL_MENU_ENABLE)
 endif()

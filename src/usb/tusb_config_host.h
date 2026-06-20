@@ -5,8 +5,7 @@
  * When not defined: USB Device mode (CDC serial via pico_stdio_usb).
  */
 
-#ifndef _TUSB_CONFIG_HOST_H_
-#define _TUSB_CONFIG_HOST_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C"
@@ -53,7 +52,7 @@ extern "C"
     // --- HOST MODE ---
     //--------------------------------------------------------------------
 
-#define CFG_TUH_DEVICE_MAX 1
+#define CFG_TUH_DEVICE_MAX 5 // Hub + 4 devices (arbitrary, can be increased if needed)
 
 #ifndef CFG_TUH_ENDPOINT_MAX
 #define CFG_TUH_ENDPOINT_MAX 8
@@ -64,6 +63,7 @@ extern "C"
 #endif
 
 // Host classes
+#define CFG_TUH_HUB 1
 #define CFG_TUH_HID 2
 #define CFG_TUH_HID_EPIN_BUFSIZE 64
 #define CFG_TUH_HID_EPOUT_BUFSIZE 64
@@ -104,5 +104,3 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _TUSB_CONFIG_HOST_H_ */

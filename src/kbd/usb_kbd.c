@@ -227,16 +227,27 @@ static void process_kbd_report(uint8_t const *report, uint16_t len)
 static void __not_in_flash_func(process_mouse_report)(uint8_t const *report, uint16_t len)
 {
     // Boot mouse: [buttons, dx, dy] (3 bytes)
+    // Boot mouse with wheel: [buttons, dx, dy, wheel] (4 bytes)
     // Some mice send [report_id, buttons, dx, dy, ...] (5+ bytes)
     int d = 0;
+
     if (len > 4)
         d = 1;
-    if (len < 3)
+
+    if (len < (3 + d))
         return;
 
     uint8_t buttons = report[0 + d];
     int8_t dx = (int8_t)report[1 + d];
     int8_t dy = (int8_t)report[2 + d];
+
+    // TODO: wheel support (use later)
+    // if (len >= (4 + d))
+    // {
+    //     int8_t dw = (int8_t)report[3 + d];
+    //     usb_mouse_state.has_wheel = true;
+    //     usb_mouse_state.wheel = (usb_mouse_state.wheel + dw) & 0x0F;
+    // }
 
     // Accumulate position (Kempston mouse wraps 0-255)
     int x = usb_mouse_state.x + dx;
@@ -244,15 +255,29 @@ static void __not_in_flash_func(process_mouse_report)(uint8_t const *report, uin
 
     if (x > 255)
         x &= 255;
+
     if (x < 0)
-        x += 255;
+        x += 256;
+
     if (y > 255)
         y &= 255;
-    if (y < 0)
-        y += 255;
 
-    // Invert buttons for Kempston (active low)
-    usb_mouse_state.buttons = (buttons ^ 0xFF) & 0x07;
+    if (y < 0)
+        y += 256;
+
+    // Build buttons byte: bits 0-2 inverted buttons, bit 3 always 1,
+    // bits 4-7: 0xF (no wheel support yet)
+    uint8_t btn = (buttons ^ 0xFF) & 0x07;
+    btn |= 0x08; // bit 3 always 1
+    btn |= 0xF0; // bits 4-7 = 1111 (no wheel)
+
+    // TODO: wheel support (use later)
+    // if (usb_mouse_state.has_wheel)
+    //     btn |= (usb_mouse_state.wheel << 4);
+    // else
+    //     btn |= 0xF0;
+
+    usb_mouse_state.buttons = btn;
     usb_mouse_state.x = (uint8_t)x;
     usb_mouse_state.y = (uint8_t)y;
 
@@ -313,6 +338,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t idx)
         usb_mouse_dev_addr = 0;
         usb_mouse_hid_idx = 0;
         memset(&usb_mouse_state, 0, sizeof(usb_mouse_state));
+        usb_mouse_state.buttons = 0xFF; // all buttons released (active-low)
 
         if (usb_kbd_event_cb)
             usb_kbd_event_cb();

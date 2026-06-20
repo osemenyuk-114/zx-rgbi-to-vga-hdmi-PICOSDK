@@ -21,25 +21,22 @@
 
 void epm3256_init(void)
 {
-    uint offset = pio_add_program(PIO_SPI, &pio_epm3256_program);
+    // Load at fixed offset right after PS2 program (static — never unloaded)
+    uint offset = pio_ps2_wrap + 1;
+    pio_add_program_at_offset(PIO_SPI, &pio_epm3256_program, offset);
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset, offset + pio_epm3256_program.length - 1);
     sm_config_set_out_shift(&c, false, false, 32); // MSB first, no autopull
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
 
-    // Data pin (MOSI)
-    pio_gpio_init(PIO_SPI, SPI_PIN_MOSI);
-    pio_sm_set_consecutive_pindirs(PIO_SPI, SM_SPI, SPI_PIN_MOSI, 1, true);
-    sm_config_set_out_pin_base(&c, SPI_PIN_MOSI);
-    sm_config_set_out_pin_count(&c, 1);
+    // Data pin
+    pio_gpio_init(PIO_SPI, KBD_PIN_DATA);
+    sm_config_set_out_pins(&c, KBD_PIN_DATA, 1);
 
-    // Sideset pins (SCK, CS/latch)
-    pio_gpio_init(PIO_SPI, SPI_PIN_SCK);
-    pio_gpio_init(PIO_SPI, SPI_PIN_CS);
-    pio_sm_set_pindirs_with_mask(PIO_SPI, SM_SPI,
-                                 (3u << SPI_PIN_SCK) | (1u << SPI_PIN_MOSI),
-                                 (3u << SPI_PIN_SCK) | (1u << SPI_PIN_MOSI));
-    sm_config_set_sideset_pins(&c, SPI_PIN_SCK);
+    // Sideset pins (CLK, STB/latch)
+    pio_gpio_init(PIO_SPI, KBD_PIN_CLK);
+    pio_gpio_init(PIO_SPI, KBD_PIN_STB);
+    sm_config_set_sideset_pins(&c, KBD_PIN_CLK);
     sm_config_set_sideset(&c, 2, false, false);
 
     // Target ~2.5 MHz PIO clock, safe for shift registers
@@ -47,6 +44,12 @@ void epm3256_init(void)
     sm_config_set_clkdiv(&c, fdiv);
 
     pio_sm_init(PIO_SPI, SM_SPI, offset, &c);
+
+    // Set pin directions after pio_sm_init (restart clears SM pindir state)
+    pio_sm_set_pindirs_with_mask(PIO_SPI, SM_SPI,
+                                 (1u << KBD_PIN_DATA) | (1u << KBD_PIN_CLK) | (1u << KBD_PIN_STB),
+                                 (1u << KBD_PIN_DATA) | (1u << KBD_PIN_CLK) | (1u << KBD_PIN_STB));
+
     pio_sm_set_enabled(PIO_SPI, SM_SPI, true);
 }
 

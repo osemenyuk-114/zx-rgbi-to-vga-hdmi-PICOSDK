@@ -4,14 +4,15 @@
 
 ### Button Wiring
 
-Connect three push buttons to the Raspberry Pi Pico (pins 31-34):
+Connect three push buttons to the Raspberry Pi Pico. Pin assignments depend on the board variant:
 
-| Button | GPIO   | Pico Pin | Connection                            |
-|--------|--------|----------|---------------------------------------|
-| UP     | GPIO26 | 31       | Connect button between GPIO26 and GND |
-| DOWN   | GPIO27 | 32       | Connect button between GPIO27 and GND |
-| GND    | GND    | 33       | Common ground for all buttons         |
-| SEL    | GPIO28 | 34       | Connect button between GPIO28 and GND |
+| Button | Most boards | LEO_V3    | LEO_V3_2040BT |
+|--------|-------------|-----------|---------------|
+| UP     | GPIO26      | GPIO19    | GPIO20        |
+| DOWN   | GPIO27      | GPIO18    | GPIO21        |
+| SEL    | GPIO28      | GPIO17    | GPIO22        |
+
+Connect each button between its GPIO pin and GND.
 
 **Notes:**
 
@@ -110,8 +111,8 @@ MASK      >                  - Pin inversion mask submenu
 
 **FREQ Presets:**
 
-- **7,000,000 Hz** — ZX Spectrum 16K/48K
-- **7,093,800 Hz** — ZX Spectrum 128/+2/+2A/+3
+- **7,000,000 Hz** ï¿½ ZX Spectrum 16K/48K
+- **7,093,800 Hz** ï¿½ ZX Spectrum 128/+2/+2A/+3
 - While holding UP/DOWN, the value automatically snaps to the nearest preset when approaching it
 - After snapping, counting stops until the button is released
 

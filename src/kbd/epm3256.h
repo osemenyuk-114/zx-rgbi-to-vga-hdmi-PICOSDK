@@ -5,7 +5,7 @@
  * as a serial bitstream via PIO. Used on boards with shift-register
  * keyboard interface instead of CH446Q.
  *
- * Pins: SPI_PIN_MOSI (data), SPI_PIN_SCK (clock), SPI_PIN_CS (latch)
+ * Pins: KBD_PIN_DATA (data), KBD_PIN_CLK (clock), KBD_PIN_STB (latch)
  * defined per-board in g_config.h.
  */
 

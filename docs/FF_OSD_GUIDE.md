@@ -25,13 +25,14 @@ Long **SEL** hold is reserved for opening the local setup OSD menu.
 
 The FF OSD interface uses `I2C0`. Pin assignments depend on the board variant:
 
-| Board      | SDA    | SCL    |
-|------------|--------|--------|
-| 36LJU22    | GPIO16 | GPIO17 |
-| 38LJE24    | GPIO20 | GPIO21 |
-| RP2040ZERO | GPIO20 | GPIO21 |
-| 25LEO25    | GPIO20 | GPIO21 |
-| 09LJV23    | GPIO16 | GPIO17 |
+| Board          | SDA    | SCL    |
+|----------------|--------|--------|
+| 36LJU22        | GPIO16 | GPIO17 |
+| 38LJE24        | GPIO20 | GPIO21 |
+| RP2040_ZERO     | GPIO20 | GPIO21 |
+| LEO_V3         | GPIO20 | GPIO21 |
+| LEO_V3_2040BT  | GPIO16 | GPIO17 |
+| 09LJV23        | GPIO16 | GPIO17 |
 
 Boards `11XGA24_1` and `11XGA24_2` do not support FF OSD (no I2C pins assigned).
 

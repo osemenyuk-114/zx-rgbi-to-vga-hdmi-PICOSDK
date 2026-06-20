@@ -4,6 +4,7 @@
 #include "hardware/vreg.h"
 
 #include "g_config.h"
+#include "led.h"
 #include "rgb_capture.h"
 #include "settings.h"
 #include "v_buf.h"
@@ -62,6 +63,10 @@ void setup()
   check_settings(&settings);
 #endif
   set_buffering_mode(settings.buffering_mode);
+
+  // Initialize LED before video output so WS2812 PIO program claims offset 0 on PIO0
+  led_init();
+
   draw_welcome_screen(*(video_modes[settings.video_out_mode]));
   set_scanlines_mode();
   start_video_output(settings.video_out_type);
@@ -102,10 +107,6 @@ void loop()
 
 void __attribute__((weak)) setup1()
 {
-  gpio_init(LED_PIN);
-  gpio_set_dir(LED_PIN, GPIO_OUT);
-  gpio_put(LED_PIN, 0);
-
   while (!start_core0)
     sleep_ms(10);
 
@@ -147,9 +148,20 @@ void __attribute__((weak)) __not_in_flash_func(loop1())
   sleep_ms(100);
 #endif
 
+#ifdef KBD_ENABLE
+  // Timeout: turn off blue LED if no keyboard activity for this cycle
+  {
+    static uint32_t prev_kbd_cnt = 0;
+    uint32_t cnt = kbd_activity_cnt;
+    if (cnt == prev_kbd_cnt)
+      led_put(LED_B, 0);
+    prev_kbd_cnt = cnt;
+  }
+#endif
+
   if (frame_count > 1)
   {
-    gpio_put(LED_PIN, (frame_count & 0x20) && capture_active);
+    led_put(LED_G, ((frame_count & 0x20) && capture_active) ? 16 : 0);
 
     if (frame_count == frame_count_tmp1)
     {

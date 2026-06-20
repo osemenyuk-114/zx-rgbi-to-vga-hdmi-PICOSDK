@@ -253,8 +253,9 @@ void ps2_kbd_clear_state(void)
 
 void ps2_kbd_pio_init(void)
 {
-    // Add PIO program
-    uint offset = pio_add_program(PIO_PS2, &pio_ps2_program);
+    // Add PIO program at offset 0 (static — never unloaded, first in PIO1 memory)
+    uint offset = 0;
+    pio_add_program_at_offset(PIO_PS2, &pio_ps2_program, offset);
 
     // Patch wait instructions with the actual PS2_PIN_CLK from g_config.h
     // (the .pio file uses a placeholder value)

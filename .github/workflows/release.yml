@@ -13,10 +13,11 @@ jobs:
         board:
           - BOARD_36LJU22
           - BOARD_38LJE24
-          - BOARD_RP2040ZERO
+          - BOARD_RP2040_ZERO
           # - BOARD_11XGA24_1
           # - BOARD_11XGA24_2
-          # - BOARD_25LEO25
+          - BOARD_LEO_V3
+          - BOARD_LEO_V3_2040BT
           # - BOARD_09LJV23
 
     steps:

@@ -7,4 +7,9 @@
 
 #pragma once
 
+#include <stdint.h>
+
 void kbd_init(void);
+
+// Toggles on each keyboard/mouse event (odd = active)
+extern volatile uint32_t kbd_activity_cnt;
