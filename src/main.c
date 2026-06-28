@@ -18,6 +18,10 @@
 #include "ff_osd.h"
 #endif
 
+#ifdef HW_CONFIG_ENABLE
+#include "hw_config.h"
+#endif
+
 #ifdef KBD_ENABLE
 #include "kbd.h"
 #endif
@@ -30,10 +34,6 @@
 #ifdef SERIAL_MENU_ENABLE
 #include "pico/stdio_usb.h"
 #include "serial_menu.h"
-#endif
-
-#ifdef HW_CONFIG_ENABLE
-#include "hw_config.h"
 #endif
 
 settings_t settings;
