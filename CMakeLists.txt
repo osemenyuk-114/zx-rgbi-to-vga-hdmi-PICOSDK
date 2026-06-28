@@ -19,17 +19,18 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 # Board variant (pass -DBOARD=BOARD_XXX to override)
 # Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040_ZERO
 #            BOARD_11XGA24_1, BOARD_11XGA24_2,
-#            BOARD_LEO_V3, BOARD_LEO_V3_2040BT 
+#            BOARD_LEO_V2, BOARD_LEO_V3, BOARD_LEO_V3_2040BT 
 #            BOARD_09LJV23
 #
 if(NOT DEFINED BOARD)
-    set(BOARD "BOARD_36LJU22")
+    # set(BOARD "BOARD_36LJU22")
     # set(BOARD "BOARD_38LJE24")
     # set(BOARD "BOARD_RP2040_ZERO")
     # set(BOARD "BOARD_11XGA24_1")
     # set(BOARD "BOARD_11XGA24_2")
+    # set(BOARD "BOARD_LEO_V2")
     # set(BOARD "BOARD_LEO_V3")
-    # set(BOARD "BOARD_LEO_V3_2040BT")
+    set(BOARD "BOARD_LEO_V3_2040BT")
 endif()
 
 # Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)
@@ -42,8 +43,13 @@ endif()
 # =============================================================================
 
 # Force USE_PICO2 OFF for RP2040-based boards (no RP2350 variant)
-if(BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_LEO_V3" OR BOARD STREQUAL "BOARD_LEO_V3_2040BT")
+if(BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_LEO_V2" OR BOARD STREQUAL "BOARD_LEO_V3" OR BOARD STREQUAL "BOARD_LEO_V3_2040BT")
     set(USE_PICO2 OFF)
+endif()
+
+# Enable hardware configuration code for LEO v3 boards
+if(BOARD STREQUAL "BOARD_LEO_V3" OR BOARD STREQUAL "BOARD_LEO_V3_2040BT")
+    set(HW_CONFIG_ENABLE ON)
 endif()
 
 # Select Pico board type based on board variant (FORCE overrides cached value)
@@ -84,7 +90,7 @@ pico_sdk_init()
 add_compile_definitions(${BOARD})
 
 # Set board options based on board variant
-if(BOARD STREQUAL "BOARD_36LJU22" OR BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_09LJV23")
+if(BOARD STREQUAL "BOARD_36LJU22" OR BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_09LJV23" OR BOARD STREQUAL "BOARD_LEO_V2")
     set(OSD_MENU_ENABLE ON)
     set(OSD_FF_ENABLE ON)
     set(PS2_KBD_ENABLE OFF)
@@ -191,6 +197,12 @@ endif()
 if(USB_KBD_ENABLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/kbd/usb_kbd.c
+    )
+endif()
+
+if(HW_CONFIG_ENABLE)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/hw_config.c
     )
 endif()
 

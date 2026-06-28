@@ -30,7 +30,8 @@ The FF OSD interface uses `I2C0`. Pin assignments depend on the board variant:
 | 36LJU22        | GPIO16 | GPIO17 |
 | 38LJE24        | GPIO20 | GPIO21 |
 | RP2040_ZERO    | GPIO20 | GPIO21 |
-| LEO_V3         | GPIO20 | GPIO21 |
+| LEO_V2         | GPIO20 | GPIO21 |
+| LEO_V3         | GPIO18 | GPIO19 |
 | LEO_V3_2040BT  | GPIO16 | GPIO17 |
 | 09LJV23        | GPIO16 | GPIO17 |
 
@@ -133,11 +134,91 @@ V_POS     TOP/BOTTOM
 
 - Selects whether the FF OSD appears at the top or bottom of the video output
 
-## FlashFloppy Configuration
+## FlashFloppy Configuration (FF.CFG)
 
-### Native FF OSD Mode
+The Gotek running FlashFloppy is configured via a text file `FF.CFG` placed in the root folder or `FF/` subfolder of the USB drive. Below are the display-related options relevant to FF OSD.
 
-For the native FlashFloppy protocol, configure the Gotek with an FF.CFG similar to:
+> Full reference: [FF.CFG (local copy)](FF.CFG) | [FF.CFG on GitHub](https://github.com/keirf/flashfloppy/blob/master/examples/FF.CFG)
+
+### FF.CFG Display Options Reference
+
+#### `display-type`
+
+Tells FlashFloppy what type of display is connected.
+
+| Value         | Description                                                                                                  |
+|---------------|--------------------------------------------------------------------------------------------------------------|
+| `auto`        | Auto-detect (7-seg LED, LCD, OLED). Recommended for most setups.                                             |
+| `lcd-CCxRR`   | I2C LCD with backpack. CC = columns (16–40), RR = rows (02–04). Example: `lcd-20x04`                         |
+| `oled-128xNN` | I2C OLED, NN = 32 or 64. Optional suffixes: `-rotate`, `-hflip`, `-narrow`, `-narrower`, `-inverse`, `-slow` |
+
+For **native FF OSD** protocol, use `auto` or any OLED/LCD type — the Gotek will send display data over I2C regardless.
+
+For **LCD HD44780 compatibility** mode, use `lcd-CCxRR` matching your desired geometry (e.g. `lcd-20x04`).
+
+#### `osd-display-order`
+
+Controls text row arrangement specifically for the OSD output. Comma-separated list, one entry per display row (top to bottom).
+
+Content row values:
+
+- `0` — Current image name
+- `1` — Status (track number, write indicator)
+- `2` — Image/Volume info
+- `3` — Current subfolder name
+- `7` — Blank row
+
+Optional suffix `d` = double height (OLED only, ignored for LCD).
+
+Examples:
+
+```ini
+osd-display-order = 3,0        # Two rows: folder name on top, image name below
+osd-display-order = 0,1        # Two rows: image name on top, status below
+osd-display-order = 3,0,2,1    # Four rows: folder, image, info, status
+```
+
+Default: depends on display type.
+
+#### `display-order`
+
+Same syntax as `osd-display-order`, but applies to the physical LCD/OLED display. Both options can be configured independently — useful when you have a small OLED showing minimal info while the OSD shows full details.
+
+#### `osd-columns`
+
+Number of text columns for the OSD output. Only respected when no physical LCD/OLED is found (i.e. OSD is the sole display).
+
+- Values: **16 to 40**
+- Default: `40`
+
+When a physical display is also connected, the OSD column count follows the primary display configuration.
+
+#### `display-off-secs`
+
+Turn the display off after N seconds of inactivity.
+
+- `0` — always off
+- `255` — always on
+- Values: **0 to 255**
+- Default: `60`
+
+When the display is off, the FF OSD overlay is hidden on the video output.
+
+#### `display-on-activity`
+
+Switch on display when there is drive activity.
+
+| Value | Description                              |
+|-------|------------------------------------------|
+| `yes` | Trigger on track changes and disk writes |
+| `sel` | Trigger on drive select only             |
+| `no`  | No automatic trigger                     |
+
+Default: `yes`
+
+### Example: Native FF OSD Mode
+
+For the native FlashFloppy protocol, configure the Gotek with:
 
 ```ini
 display-type = auto
@@ -153,7 +234,7 @@ Notes:
 - A single FF OSD can show up to 40 columns and up to 4 rows
 - With dual displays, FF OSD column count follows the primary display configuration used by the host
 
-### LCD Compatibility Mode
+### Example: LCD Compatibility Mode
 
 For HD44780-compatible mode, use a configuration similar to:
 
@@ -164,6 +245,22 @@ display-off-secs = 60
 ```
 
 In this mode, the Pico behaves like a PCF8574 LCD backpack, and the visible layout is controlled by the local **ROWS** and **COLUMNS** settings in the converter.
+
+### Example: OSD-Only (No Physical Display)
+
+If you have no physical OLED/LCD attached to the Gotek and use only the video OSD:
+
+```ini
+display-type = auto
+display-probe-ms = 0
+osd-display-order = 3,0d,1
+osd-columns = 40
+display-off-secs = 255
+```
+
+- `display-probe-ms = 0` — skip probing for physical display (faster boot)
+- `display-off-secs = 255` — keep OSD always visible
+- `0d` — double-height image name row (OLED-style rendering)
 
 ## Runtime Behavior
 

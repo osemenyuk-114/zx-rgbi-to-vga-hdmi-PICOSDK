@@ -32,6 +32,10 @@
 #include "serial_menu.h"
 #endif
 
+#ifdef HW_CONFIG_ENABLE
+#include "hw_config.h"
+#endif
+
 settings_t settings;
 
 volatile bool start_core0 = false;
@@ -58,6 +62,11 @@ void setup()
 #endif
 
   load_settings(&settings);
+
+#ifdef HW_CONFIG_ENABLE
+  hw_init(&settings.hw_config);
+#endif
+
 #ifdef VIDEO_OUTPUT_AUTO_DETECT
   settings.video_out_type = detect_video_output_type();
   check_settings(&settings);

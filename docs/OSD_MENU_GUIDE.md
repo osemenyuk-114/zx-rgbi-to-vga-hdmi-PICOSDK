@@ -54,7 +54,8 @@ Connect each button between its GPIO pin and GND.
 OUTPUT SETTINGS      >
 CAPTURE SETTINGS     >
 IMAGE ADJUST         >
-FF OSD CONFIG        >
+FF OSD CONFIG        >   (FlashFloppy builds only)
+HARDWARE CONFIG      >   (LEO V3 boards only)
 ABOUT                >
 SAVE
 EXIT
@@ -63,6 +64,7 @@ EXIT
 **Note:**
 
 - **FF OSD CONFIG** is available on firmware builds with FlashFloppy OSD support enabled
+- **HARDWARE CONFIG** is available on LEO V3 and LEO V3 2040BT board variants
 
 ### OUTPUT SETTINGS
 
@@ -200,6 +202,31 @@ This menu configures the optional I2C on-screen display interface for Gotek driv
 To avoid duplicating protocol behavior, addresses, host-side configuration, and troubleshooting, see:
 
 - [FF OSD Guide](FF_OSD_GUIDE.md)
+
+### HARDWARE CONFIG
+
+> Available on **LEO V3** and **LEO V3 2040BT** board variants only.
+
+```text
+ROM BANK    [1..8]
+RAM (KB)    128 / 1024
+GOTEK DRIVE OFF / A / B
+< BACK TO MAIN
+```
+
+**ROM BANK** and **GOTEK DRIVE** use tuning mode:
+
+- Press SEL to enter tuning mode (`>` indicator, bright cyan highlight)
+- Use UP/DOWN to change the value
+- Press SEL again to exit tuning mode
+
+**RAM (KB)** is a direct toggle:
+
+- Press SEL to switch between **128 KB** and **1024 KB**
+- No tuning mode — value changes immediately on each SEL press
+
+All three settings take effect immediately via GPIO when changed.
+Use **SAVE** from the main menu to persist the values across reboot.
 
 ## Visual Indicators
 

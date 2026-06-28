@@ -30,8 +30,11 @@ For detailed hardware and original software information, see the upstream projec
   - PS/2 keyboard support (PIO-based, IRQ-driven).
   - USB keyboard support (TinyUSB Host, boot protocol).
   - Full ZX Spectrum keyboard emulation via CH446Q analog switch matrix.
-  - OSD menu control via keyboard (F11, arrows, Enter, Esc).
-  - Gotek/FlashFloppy control via keyboard (F12 toggle, arrows, Enter).
+  - OSD menu control via keyboard (F9, arrows, Enter, Esc).
+  - Gotek/FlashFloppy control via keyboard (F10 toggle, arrows, Enter).
+  - NMI signal via F11: CH446Q mode — closes switch Y5:X10; EPM3256 mode — sends NMI bit in SPI frame (EPM3256 emulates button press).
+  - RESET signal via F12: CH446Q mode — closes switch Y6:X11; EPM3256 mode — sends RESET bit in SPI frame.
+  - USB mouse support with Kempston-compatible output (SPI/EPM3256 builds); F6 toggles button mapping.
   - Visual indicator: FF OSD text turns Cyan when keyboard controls Gotek.
 - **On-Screen Display (OSD) Menu:**
   - Full-featured graphical menu system overlaid on video output.
@@ -73,8 +76,10 @@ For detailed hardware and original software information, see the upstream projec
 - **PS/2 Keyboard**: PIO-based driver with IRQ-driven scancode decoding.
 - **USB Keyboard**: TinyUSB Host boot keyboard driver with O(1) HID→universal key mapping.
 - **ZX Spectrum Emulation**: Universal→ZX 8×5 matrix mapping via CH446Q analog switch.
-- **OSD Control**: F11 toggles menu, arrows/Enter/Esc navigate. Controlled repeat (400ms delay, 80ms rate).
-- **Gotek Control**: F12 toggles keyboard→Gotek mode (arrows→LEFT/RIGHT, Enter→SELECT). Cyan text indicator.
+- **OSD Control**: F9 toggles menu, arrows/Enter/Esc navigate. Controlled repeat (400ms delay, 80ms rate).
+- **Gotek Control**: F10 toggles keyboard→Gotek mode (arrows→LEFT/RIGHT, Enter→SELECT). Cyan text indicator.
+- **NMI / RESET**: F11/F12 are level-based. CH446Q mode: directly drives switches Y5:X10 (NMI) and Y6:X11 (RESET). EPM3256 mode: NMI/RESET bits sent in every SPI frame; EPM3256 emulates button presses. EPM3256 V0: not supported.
+- **USB Mouse**: Kempston-compatible X/Y accumulation and buttons (SPI builds). Default: right→D0, left→D1 (original schematic). F6 toggles mapping.
 - See [Keyboard Guide](docs/KEYBOARD_GUIDE.md) for full details.
 
 ### Video Output Stability
