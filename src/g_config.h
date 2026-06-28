@@ -41,9 +41,9 @@
 #endif
 
 #define WS2812_LED_ENABLE
-#define I2C_PIN_SDA 20
-#define I2C_PIN_SCL 21
-#define I2C_INST i2c0
+#define I2C_PIN_SDA 18
+#define I2C_PIN_SCL 19
+#define I2C_INST i2c1
 
 #endif
 
@@ -109,6 +109,7 @@
 #define HW_CONFIG_ENABLE
 
 #ifdef BOARD_LEO_V3
+
 #define HW_VERSION "LEO v3.0"
 #define WS2812_LED_ENABLE
 #define I2C_PIN_SDA 18
