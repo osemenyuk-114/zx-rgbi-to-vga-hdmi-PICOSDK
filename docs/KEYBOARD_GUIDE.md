@@ -18,13 +18,14 @@ Both PS/2 and USB can work simultaneously — key states are OR-merged.
 | Key        | Action                                            |
 |------------|---------------------------------------------------|
 | **F9**     | Open / toggle OSD setup menu                      |
-| **↑ / ←**  | Navigate up / adjust value up                     |
-| **↓ / →**  | Navigate down / adjust value down                 |
+| **↑ / ←**  | Navigate up                                       |
+| **↓ / →**  | Navigate down                                     |
 | **Enter**  | Select item / enter tuning mode                   |
 | **Esc**    | Exit tuning → back to submenu → main menu → close |
 
 Arrow keys have controlled repeat: 400ms initial delay, then 80ms rate.
 Hold duration enables progressive acceleration for frequency adjustment.
+In tuning mode, parameter direction is `↑/→` increase and `↓/←` decrease.
 
 ---
 
@@ -33,14 +34,14 @@ Hold duration enables progressive acceleration for frequency adjustment.
 | Key       | Action                              |
 |-----------|-------------------------------------|
 | **F10**   | Toggle Gotek keyboard mode (on/off) |
-| **← / ↑** | Gotek LEFT (previous file)          |
-| **→ / ↓** | Gotek RIGHT (next file)             |
+| **← / ↓** | Gotek LEFT (previous file)          |
+| **→ / ↑** | Gotek RIGHT (next file)             |
 | **Enter** | Gotek SELECT (load file)            |
 
 When Gotek mode is active:
 
 - Arrow keys and Enter are routed to Gotek via I2C (not to ZX Spectrum).
-- Gotek OSD is displayed on screen regardless of Gotek backlight state.
+- Gotek OSD is displayed on-screen regardless of Gotek backlight state.
 - Press **F10** again to deactivate and release the keyboard.
 
 ---
@@ -72,8 +73,8 @@ USB mice are supported in SPI/EPM3256 firmware builds.
 The default matches the original hardware schematic (right→D0, left→D1).  
 **F6** toggles the mapping: swapped = left→D0, right→D1.
 
-The mouse X/Y position is accumulated (0–255, wrapping) in Kempston format.  
-Y axis is inverted (USB reports screen-down as positive; Kempston expects the opposite).
+The mouse X/Y position is accumulated (0–255, wrapping) in Kempston format.
+Y-axis direction is inverted (USB reports screen-down as positive; Kempston expects the opposite).
 
 ---
 

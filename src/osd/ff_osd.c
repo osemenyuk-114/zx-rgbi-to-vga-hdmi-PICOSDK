@@ -529,11 +529,11 @@ void ff_osd_update()
 
     if (!block_ff_buttons)
     {
-        if (osd_button_pressed(0)) // UP -> LEFT
-            buttons |= FF_OSD_BUTTON_LEFT;
-
-        if (osd_button_pressed(1)) // DOWN -> RIGHT
+        if (osd_button_pressed(0)) // UP -> RIGHT
             buttons |= FF_OSD_BUTTON_RIGHT;
+
+        if (osd_button_pressed(1)) // DOWN -> LEFT
+            buttons |= FF_OSD_BUTTON_LEFT;
     }
 
 #ifdef KBD_ENABLE
@@ -543,10 +543,10 @@ void ff_osd_update()
         uint8_t held = osd_virtual_held;
 
         if (held & OSD_VIRT_UP)
-            buttons |= FF_OSD_BUTTON_LEFT;
+            buttons |= FF_OSD_BUTTON_RIGHT;
 
         if (held & OSD_VIRT_DOWN)
-            buttons |= FF_OSD_BUTTON_RIGHT;
+            buttons |= FF_OSD_BUTTON_LEFT;
 
         if (held & OSD_VIRT_SEL)
             buttons |= FF_OSD_BUTTON_SELECT;

@@ -31,6 +31,7 @@ if(NOT DEFINED BOARD)
     # set(BOARD "BOARD_LEO_V2")
     # set(BOARD "BOARD_LEO_V3")
     # set(BOARD "BOARD_LEO_V3_2040BT")
+    # set(BOARD "BOARD_09LJV23")
 endif()
 
 # Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)

@@ -354,8 +354,8 @@ extern uint8_t g_v_buf[];
 #define FREQUENCY_MAX 8000000
 #define EXT_CLK_DIVIDER_MAX 5
 #define DELAY_MAX 31
-#define shX_MAX 200
-#define shY_MAX 200
+#define shX_MAX 100
+#define shY_MAX 100
 #define PIN_INVERSION_MASK 0x7f
 
 // settings DEFAULT values

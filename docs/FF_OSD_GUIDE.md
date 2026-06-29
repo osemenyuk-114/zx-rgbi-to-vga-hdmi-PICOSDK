@@ -6,30 +6,31 @@ This firmware can act as an external on-screen display for a Gotek floppy emulat
 
 Two I2C display modes are supported:
 
-- **FlashFloppy protocol** - Native FF OSD mode with up to 40 columns, up to 4 rows, and support for double-height rows
-- **LCD HD44780 compatibility** - Emulates a PCF8574-style HD44780 I2C backpack at the standard `0x27` address
+- **FlashFloppy protocol** - native FF OSD mode with up to 40 columns, up to 4 rows, and support for double-height rows
+- **LCD HD44780 compatibility** - emulates a PCF8574-style HD44780 I2C backpack at the standard `0x27` address
 
 FF OSD uses the same three local buttons as the normal setup OSD:
 
 In native **FlashFloppy** mode, short taps are forwarded:
 
-- **UP** -> FlashFloppy **LEFT**
-- **DOWN** -> FlashFloppy **RIGHT**
+- **UP** -> FlashFloppy **RIGHT**
+- **DOWN** -> FlashFloppy **LEFT**
 - **SEL** -> FlashFloppy **SELECT**
 
-Long **SEL** hold is reserved for opening the local setup OSD menu.
+A long **SEL** hold is reserved for opening the local setup OSD menu.
 
 ## Hardware Connections
 
 ### Pico I2C Pins
 
-The FF OSD interface uses `I2C0`. Pin assignments depend on the board variant:
+The FF OSD interface uses the board-defined I2C instance (`I2C0` or `I2C1`).
+Pin assignments depend on the board variant:
 
 | Board          | SDA    | SCL    |
 |----------------|--------|--------|
 | 36LJU22        | GPIO16 | GPIO17 |
-| 38LJE24        | GPIO20 | GPIO21 |
 | RP2040_ZERO    | GPIO18 | GPIO19 |
+| 38LJE24        | GPIO20 | GPIO21 |
 | LEO_V2         | GPIO18 | GPIO19 |
 | LEO_V3         | GPIO18 | GPIO19 |
 | LEO_V3_2040BT  | GPIO16 | GPIO17 |
@@ -168,7 +169,7 @@ Content row values:
 - `3` — Current subfolder name
 - `7` — Blank row
 
-Optional suffix `d` = double height (OLED only, ignored for LCD).
+Optional suffix `d` means double-height text (OLED only, ignored for LCD).
 
 Examples:
 
@@ -178,11 +179,11 @@ osd-display-order = 0,1        # Two rows: image name on top, status below
 osd-display-order = 3,0,2,1    # Four rows: folder, image, info, status
 ```
 
-Default: depends on display type.
+Default value depends on display type.
 
 #### `display-order`
 
-Same syntax as `osd-display-order`, but applies to the physical LCD/OLED display. Both options can be configured independently — useful when you have a small OLED showing minimal info while the OSD shows full details.
+Same syntax as `osd-display-order`, but applies to the physical LCD/OLED display. Both options can be configured independently, which is useful when a small OLED shows minimal info while the OSD shows full details.
 
 #### `osd-columns`
 
@@ -229,7 +230,7 @@ display-off-secs = 60
 
 Notes:
 
-- `display-type = oled-128x64` can also be used if that matches the host setup better
+- `display-type = oled-128x64` can also be used if it better matches the host setup
 - `osd-display-order` and `display-order` can be configured independently
 - A single FF OSD can show up to 40 columns and up to 4 rows
 - With dual displays, FF OSD column count follows the primary display configuration used by the host
@@ -267,11 +268,11 @@ display-off-secs = 255
 - The FF OSD renderer is separate from the normal converter setup menu
 - If the converter setup menu is open, that menu takes over the screen until it closes
 - In FLASHFLOPPY protocol mode, opening the local converter menu uses a long **SEL** hold (about 1 second)
-- In FLASHFLOPPY protocol mode, short UP/DOWN taps are forwarded to the host as LEFT/RIGHT navigation
+- In FLASHFLOPPY protocol mode, short UP/DOWN taps are forwarded to the host as RIGHT/LEFT navigation
 - When the local menu is opened by a long hold, menu key handling is blocked until keys are released once to avoid carry-over scrolling/actions
 - On local menu close, forwarding to FF OSD is also blocked until buttons are released once, preventing delayed release from triggering host actions
 - When the host display is off, the FF OSD overlay is hidden
-- In native FlashFloppy mode, host text can update asynchronously over I2C
+- In native FlashFloppy mode, host text may update asynchronously over I2C
 - Native FF rendering uses a CP437-style glyph set (including box-drawing symbols and extended character support)
 - Horizontal placement uses five fixed presets rather than pixel-by-pixel movement
 - Vertical placement is only **TOP** or **BOTTOM**
@@ -283,7 +284,7 @@ display-off-secs = 255
 
 Factory defaults for FF OSD settings are:
 
-- Enabled: **No**
+- Enabled: **No** on `36LJU22`, `RP2040_ZERO`, `38LJE24`, `09LJV23`; **Yes** on `LEO_V2`, `LEO_V3`, `LEO_V3_2040BT`
 - Protocol: **FlashFloppy**
 - Columns: **40**
 - Rows: **3**

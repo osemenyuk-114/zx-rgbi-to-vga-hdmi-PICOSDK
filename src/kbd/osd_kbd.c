@@ -86,10 +86,16 @@ void __not_in_flash_func(osd_kbd_intercept)(kbd_state_t *state)
 
         // Track held state for arrows (Core 0 handles repeat timing)
         uint8_t held = 0;
-        if (GET_STATE_KEY(*state, KEY_UP) || GET_STATE_KEY(*state, KEY_RIGHT))
+#ifdef OSD_MENU_ENABLE
+        bool nav_mode = osd_state.menu_active && !osd_menu_state.tuning_mode;
+#else
+        bool nav_mode = false;
+#endif
+
+        if (GET_STATE_KEY(*state, KEY_UP) || GET_STATE_KEY(*state, nav_mode ? KEY_LEFT : KEY_RIGHT))
             held |= OSD_VIRT_UP;
 
-        if (GET_STATE_KEY(*state, KEY_DOWN) || GET_STATE_KEY(*state, KEY_LEFT))
+        if (GET_STATE_KEY(*state, KEY_DOWN) || GET_STATE_KEY(*state, nav_mode ? KEY_RIGHT : KEY_LEFT))
             held |= OSD_VIRT_DOWN;
 
         if (GET_STATE_KEY(*state, KEY_ENTER))

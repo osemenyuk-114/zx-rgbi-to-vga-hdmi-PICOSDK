@@ -1,8 +1,8 @@
 /**
- * tusb_config_host.h - TinyUSB configuration for Pico SDK
+ * tusb_config_host.h - TinyUSB configuration
  *
- * When USB_KBD_ENABLE is defined: pure USB Host mode for HID keyboard.
- * When not defined: USB Device mode (CDC serial via pico_stdio_usb).
+ * - When USB_KBD_ENABLE is defined: USB Host mode for HID keyboard
+ * - Otherwise: USB Device mode (CDC serial)
  */
 
 #pragma once
@@ -21,7 +21,7 @@ extern "C"
 #endif
 
 #ifdef USB_KBD_ENABLE
-// Pure USB Host mode — pico_stdio_usb is not linked in this configuration
+// USB Host mode
 #define CFG_TUSB_RHPORT0_MODE OPT_MODE_HOST
 #else
 // USB Device mode (CDC serial)

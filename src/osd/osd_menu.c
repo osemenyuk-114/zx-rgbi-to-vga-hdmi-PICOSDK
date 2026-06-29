@@ -874,7 +874,7 @@ static void render_image_adjust_menu()
         menu_item_colors(i == osd_menu_state.selected_item, i < 3 && osd_menu_state.tuning_mode, color, &fg_color, &bg_color);
 
         if (i == 0)
-            osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %d", "H_POS", settings.shX);
+            osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %d", "H_POS", shX_MAX - settings.shX);
         else if (i == 1)
             osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %d", "V_POS", settings.shY);
         else if (i == 2)
@@ -1089,10 +1089,10 @@ void osd_adjust_image_parameter(uint8_t param_index, int8_t direction)
     switch (param_index)
     {
     case 0: // Horizontal Position (shX)
-        if (direction > 0 && settings.shX < shX_MAX)
-            set_capture_shX(settings.shX + 1);
-        else if (direction < 0 && settings.shX > shX_MIN)
+        if (direction > 0 && settings.shX > shX_MIN)
             set_capture_shX(settings.shX - 1);
+        else if (direction < 0 && settings.shX < shX_MAX)
+            set_capture_shX(settings.shX + 1);
 
         break;
 

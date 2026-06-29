@@ -4,13 +4,13 @@
 
 ### Button Wiring
 
-Connect three push buttons to the Raspberry Pi Pico. Pin assignments depend on the board variant:
+Connect three push buttons to the Raspberry Pi Pico on boards where free GPIO inputs are available. Pin assignments depend on the board variant.
 
-| Button | Most boards | LEO_V3    | LEO_V3_2040BT |
-|--------|-------------|-----------|---------------|
-| UP     | GPIO26      | GPIO19    | GPIO20        |
-| DOWN   | GPIO27      | GPIO18    | GPIO21        |
-| SEL    | GPIO28      | GPIO17    | GPIO22        |
+| Button | Most boards | LEO_V3/LEO_V3_2040BT      |
+|--------|-------------|---------------------------|
+| UP     | GPIO26      | Not available (GPIO busy) |
+| DOWN   | GPIO27      | Not available (GPIO busy) |
+| SEL    | GPIO28      | Not available (GPIO busy) |
 
 Connect each button between its GPIO pin and GND.
 
@@ -19,6 +19,9 @@ Connect each button between its GPIO pin and GND.
 - All buttons use internal pull-up resistors (active LOW)
 - Press each button to connect its GPIO pin to GND
 - No external resistors required
+- On LEO V3 variants, local OSD button navigation is not possible: these lines are used as outputs for external hardware configuration, and no free GPIO inputs remain for OSD buttons
+
+For LEO V3 variants, use keyboard hotkeys for OSD navigation (F9, arrows, Enter, Esc).
 
 ## Button Layout
 
@@ -30,8 +33,8 @@ Connect each button between its GPIO pin and GND.
 
 ### Opening the Menu
 
-- **Default behavior:** Press **UP**, **DOWN**, or **SEL** to open the OSD menu
-- **When FF OSD is enabled in FLASHFLOPPY protocol mode:** Hold **SEL** for about 1 second to open the menu
+- **Default behavior (boards with local buttons):** Press **UP**, **DOWN**, or **SEL** to open the OSD menu
+- **When FF OSD is enabled in FLASHFLOPPY protocol mode (boards with local buttons):** Hold **SEL** for about 1 second to open the menu
 - When opened by a long hold, input is blocked until all buttons are released once
 
 ### Closing the Menu
@@ -41,7 +44,7 @@ Connect each button between its GPIO pin and GND.
 
 ### Video Output Type Toggle
 
-- **Hold SEL for 5+ seconds** - toggles between VGA and DVI output
+- **Hold SEL for 5+ seconds (boards with local buttons)** - toggle between VGA and DVI output
   - Does not open menu
   - Automatically switches output and resets to default resolution
   - Short press of SEL has no action when menu is closed
@@ -258,7 +261,7 @@ To exit without saving, select **EXIT** instead.
 
 ## Tips
 
-- Menu has 10-second auto-timeout - any button press resets the timer
+- Menu has a 10-second auto-timeout; any button press resets the timer
 - Dimmed items indicate unavailable settings (e.g., SCANLINES on DVI, DIVIDER when MODE is SELF-SYNC)
 - Tuning mode allows real-time adjustment while viewing the image
 - Video mode changes only restart output if the resolution actually changed

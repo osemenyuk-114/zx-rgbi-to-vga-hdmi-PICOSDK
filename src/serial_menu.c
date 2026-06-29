@@ -360,7 +360,7 @@ void print_capture_delay()
 void print_x_offset()
 {
     printf("  X offset .................... ");
-    printf("%d\n", settings.shX);
+    printf("%d\n", shX_MAX - settings.shX);
 }
 
 void print_y_offset()
@@ -474,7 +474,7 @@ void print_ff_osd_i2c_protocol()
 void print_ff_osd_rows()
 {
     printf("  Rows ....................... ");
-    printf("%d\n", settings.ff_osd_config.rows);
+    printf("%d\n", settings.ff_osd_config.i2c_protocol ? ff_osd_display.rows : settings.ff_osd_config.rows);
 }
 
 void print_ff_osd_cols()
