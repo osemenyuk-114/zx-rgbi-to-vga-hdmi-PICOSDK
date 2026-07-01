@@ -87,8 +87,6 @@ project(ZX_RGBI_TO_VGA_HDMI C CXX ASM)
 pico_sdk_init()
 
 # ====================================================================================
-# Pass board definition to compiler
-add_compile_definitions(${BOARD})
 
 # Set board options based on board variant
 if(BOARD STREQUAL "BOARD_36LJU22" OR BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_09LJV23" OR BOARD STREQUAL "BOARD_LEO_V2")
@@ -267,6 +265,13 @@ endif()
 target_compile_options(${EXECUTABLE_NAME} PRIVATE 
     -O3 
 )
+
+# Add compile definitions for board variant and Pico version
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE ${BOARD})
+
+if(USE_PICO2)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE USE_PICO2)
+endif()
 
 # Add compile definitions for OSD features
 if(OSD_MENU_ENABLE)

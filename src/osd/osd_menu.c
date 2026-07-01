@@ -792,6 +792,7 @@ static void render_output_menu()
                 "1280X1024@60 DIV4",
             };
             const char *current_mode_name = "UNKNOWN";
+
             if (settings.video_out_type == DVI)
             {
                 if (settings.video_out_mode == MODE_640x480_60Hz)
@@ -814,6 +815,7 @@ static void render_output_menu()
                 else if (settings.video_out_mode == MODE_1280x1024_60Hz_d4)
                     current_mode_name = mode_names_vga[5];
             }
+
             osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %s", "MODE", current_mode_name);
         }
         else if (i == 1)
@@ -1130,7 +1132,7 @@ void osd_adjust_capture_parameter(uint8_t param_index, int8_t direction)
             7000000, // ZX Spectrum 16K/48K
             7093800, // ZX Spectrum 128/+2/+2A/+3
         };
-        static const uint8_t freq_presets_count = sizeof(freq_presets) / sizeof(freq_presets[0]);
+        static const uint8_t freq_presets_count = count_of(freq_presets);
 
         uint32_t freq_step = 100; // Base step: 100Hz
         uint64_t current_time = time_us_64();
@@ -1354,7 +1356,6 @@ void osd_adjust_hardware_parameter(uint8_t param_index, int8_t direction)
         else if (direction < 0 && settings.hw_config.rom_bank > HW_ROM_BANK_MIN)
             settings.hw_config.rom_bank--;
 
-        hw_set_rom_bank(settings.hw_config.rom_bank);
         break;
 
     case 2: // GOTEK DRIVE - adjust with tuning mode
