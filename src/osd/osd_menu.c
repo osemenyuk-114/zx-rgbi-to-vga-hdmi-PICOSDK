@@ -754,6 +754,20 @@ static void render_output_menu()
 {
     osd_text_print_centered(OSD_SUBTITLE_ROW, "OUTPUT SETTINGS", OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0);
 
+    const char *mode_names_dvi[] = {
+        "640X480@60",
+        "720X576@50",
+    };
+    const char *mode_names_vga[] = {
+        "640X480@60",
+        "800X600@60",
+        "1024X768@60 DIV3",
+        "1024X768@60 DIV4",
+        "1280X1024@60 DIV3",
+        "1280X1024@60 DIV4",
+    };
+    const char *current_mode_name = "UNKNOWN";
+
     for (int i = 0; i < 4; i++)
     {
         uint8_t row = OSD_MENU_START_ROW + i;
@@ -779,20 +793,6 @@ static void render_output_menu()
 
         if (i == 0)
         {
-            const char *mode_names_dvi[] = {
-                "640X480@60",
-                "720X576@50",
-            };
-            const char *mode_names_vga[] = {
-                "640X480@60",
-                "800X600@60",
-                "1024X768@60 DIV3",
-                "1024X768@60 DIV4",
-                "1280X1024@60 DIV3",
-                "1280X1024@60 DIV4",
-            };
-            const char *current_mode_name = "UNKNOWN";
-
             if (settings.video_out_type == DVI)
             {
                 if (settings.video_out_mode == MODE_640x480_60Hz)
@@ -1124,16 +1124,16 @@ void osd_adjust_image_parameter(uint8_t param_index, int8_t direction)
 
 void osd_adjust_capture_parameter(uint8_t param_index, int8_t direction)
 {
+    static const uint32_t freq_presets[] = {
+        7000000, // ZX Spectrum 16K/48K
+        7093800, // ZX Spectrum 128/+2/+2A/+3
+    };
+    static const uint8_t freq_presets_count = count_of(freq_presets);
+
     switch (param_index)
     {
     case 0: // Frequency
     {
-        static const uint32_t freq_presets[] = {
-            7000000, // ZX Spectrum 16K/48K
-            7093800, // ZX Spectrum 128/+2/+2A/+3
-        };
-        static const uint8_t freq_presets_count = count_of(freq_presets);
-
         uint32_t freq_step = 100; // Base step: 100Hz
         uint64_t current_time = time_us_64();
 
