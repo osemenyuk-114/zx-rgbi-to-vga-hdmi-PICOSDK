@@ -11,16 +11,18 @@ jobs:
       fail-fast: false
       matrix:
         board:
-          - BOARD_36LJU22
-          - BOARD_38LJE24
-          - BOARD_38LJU24
-          - BOARD_RP2040_ZERO
-          # - BOARD_11XGA24_1
-          # - BOARD_11XGA24_2
-          - BOARD_LEO_V2
-          - BOARD_LEO_V3
-          - BOARD_LEO_V3_2040BT
-          # - BOARD_09LJV23
+          - 36LJU22
+          - 38LJE24
+          - 38LJE24-PICO2
+          - 38LJU24
+          - 38LJU24-PICO2
+          - RP2040_ZERO
+          # - 11XGA24_1
+          # - 11XGA24_2
+          - LEO_V2
+          - LEO_V3
+          - LEO_V3_2040BT
+          # - 09LJV23
 
     steps:
       - name: Checkout repository
@@ -51,13 +53,20 @@ jobs:
 
       - name: Build firmware
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBOARD=${{ matrix.board }} -DUSE_PICO2=OFF
+          BOARD_ENTRY="${{ matrix.board }}"
+          if [[ "$BOARD_ENTRY" == *-PICO2 ]]; then
+            BOARD_NAME="BOARD_${BOARD_ENTRY%-PICO2}"
+            USE_PICO2=ON
+          else
+            BOARD_NAME="BOARD_${BOARD_ENTRY}"
+            USE_PICO2=OFF
+          fi
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBOARD=${BOARD_NAME} -DUSE_PICO2=${USE_PICO2}
           cmake --build build --parallel $(nproc)
 
       - name: Rename firmware for release
         run: |
-          BOARD_SHORT=$(echo "${{ matrix.board }}" | sed 's/^BOARD_//')
-          mv build/ZX_RGBI_TO_VGA_HDMI.uf2 "build/ZX_RGBI_TO_VGA_HDMI-${BOARD_SHORT}-${{ steps.fw_version.outputs.version_no_v }}.uf2"
+          mv build/ZX_RGBI_TO_VGA_HDMI.uf2 "build/ZX_RGBI_TO_VGA_HDMI-${{ matrix.board }}-${{ steps.fw_version.outputs.version_no_v }}.uf2"
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
