@@ -25,8 +25,9 @@ extern video_mode_t video_mode;
 extern int16_t h_visible_area;
 
 static uint32_t *v_out_dma_buf[2];
-static uint32_t *v_out_sync_hblank; // pre-filled H-blank line (NO_SYNC + H_SYNC + NO_SYNC)
-static uint32_t *v_out_sync_vsync;  // pre-filled V-sync line (V_SYNC + VH_SYNC + V_SYNC)
+static uint32_t *v_out_dma_buf_alloc; // single contiguous allocation for both ping-pong buffers
+static uint32_t *v_out_sync_hblank;   // pre-filled H-blank line (NO_SYNC + H_SYNC + NO_SYNC)
+static uint32_t *v_out_sync_vsync;    // pre-filled V-sync line (V_SYNC + VH_SYNC + V_SYNC)
 
 static uint32_t pixels[256];
 
@@ -330,28 +331,34 @@ void start_dvi()
 
   // allocate sync line buffers (pre-filled, never modified)
   v_out_sync_hblank = calloc(whole_line, sizeof(uint8_t));
+
   if (!v_out_sync_hblank)
     watchdog_reboot(0, 0, 0);
+
   memset((uint8_t *)v_out_sync_hblank, NO_SYNC, video_mode.h_visible_area + video_mode.h_front_porch);
   memset((uint8_t *)v_out_sync_hblank + video_mode.h_visible_area + video_mode.h_front_porch, H_SYNC, video_mode.h_sync_pulse);
   memset((uint8_t *)v_out_sync_hblank + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, NO_SYNC, video_mode.h_back_porch);
 
   v_out_sync_vsync = calloc(whole_line, sizeof(uint8_t));
+
   if (!v_out_sync_vsync)
     watchdog_reboot(0, 0, 0);
+
   memset((uint8_t *)v_out_sync_vsync, V_SYNC, video_mode.h_visible_area + video_mode.h_front_porch);
   memset((uint8_t *)v_out_sync_vsync + video_mode.h_visible_area + video_mode.h_front_porch, VH_SYNC, video_mode.h_sync_pulse);
   memset((uint8_t *)v_out_sync_vsync + video_mode.h_visible_area + video_mode.h_front_porch + video_mode.h_sync_pulse, V_SYNC, video_mode.h_back_porch);
 
-  // allocate image line buffers (ping-pong, pre-filled with H-blank sync pattern)
-  v_out_dma_buf[0] = calloc(whole_line, sizeof(uint8_t));
-  if (!v_out_dma_buf[0])
-    watchdog_reboot(0, 0, 0);
-  memcpy((uint8_t *)v_out_dma_buf[0], (uint8_t *)v_out_sync_hblank, whole_line);
+  // Allocate ping-pong image line buffers as a single contiguous block so both
+  // buffers have identical SRAM bank access patterns (same alignment modulo 4),
+  // eliminating bus contention asymmetry between even and odd scanlines.
+  v_out_dma_buf_alloc = calloc(whole_line * 2, sizeof(uint8_t));
 
-  v_out_dma_buf[1] = calloc(whole_line, sizeof(uint8_t));
-  if (!v_out_dma_buf[1])
+  if (!v_out_dma_buf_alloc)
     watchdog_reboot(0, 0, 0);
+
+  v_out_dma_buf[0] = v_out_dma_buf_alloc;
+  v_out_dma_buf[1] = (uint32_t *)((uint8_t *)v_out_dma_buf_alloc + whole_line);
+  memcpy((uint8_t *)v_out_dma_buf[0], (uint8_t *)v_out_sync_hblank, whole_line);
   memcpy((uint8_t *)v_out_dma_buf[1], (uint8_t *)v_out_sync_hblank, whole_line);
 
   // === Output PIO (SM0): TMDS serializer ===
@@ -473,7 +480,7 @@ void start_dvi()
   irq_set_enabled(DMA_IRQ_0, true);
 
   // start the line DMA (ch3↔ch2 loop is already running)
-  dma_start_channel_mask((1u << dma_ch0));
+  dma_channel_start(dma_ch0);
 }
 
 void stop_dvi()
@@ -507,18 +514,15 @@ void stop_dvi()
   dma_channel_unclaim(dma_ch2);
   dma_channel_unclaim(dma_ch3);
 
-  // free index buffers
-  if (v_out_dma_buf[0] != NULL)
+  // free index buffers (single contiguous allocation)
+  if (v_out_dma_buf_alloc != NULL)
   {
-    free(v_out_dma_buf[0]);
-    v_out_dma_buf[0] = NULL;
+    free(v_out_dma_buf_alloc);
+    v_out_dma_buf_alloc = NULL;
   }
 
-  if (v_out_dma_buf[1] != NULL)
-  {
-    free(v_out_dma_buf[1]);
-    v_out_dma_buf[1] = NULL;
-  }
+  v_out_dma_buf[0] = NULL;
+  v_out_dma_buf[1] = NULL;
 
   // free sync buffers
   if (v_out_sync_hblank != NULL)

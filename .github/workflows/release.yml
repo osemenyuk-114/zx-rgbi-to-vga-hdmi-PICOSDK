@@ -13,6 +13,7 @@ jobs:
         board:
           - BOARD_36LJU22
           - BOARD_38LJE24
+          - BOARD_38LJU24
           - BOARD_RP2040_ZERO
           # - BOARD_11XGA24_1
           # - BOARD_11XGA24_2

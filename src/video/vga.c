@@ -44,8 +44,9 @@ extern int16_t v_margin;
 static bool scanlines_mode = false;
 
 static uint32_t *v_out_dma_buf[2];
-static uint32_t *v_out_sync_hblank; // pre-filled H-blank line (H sync only)
-static uint32_t *v_out_sync_vsync;  // pre-filled V-sync line (VH sync)
+static uint32_t *v_out_dma_buf_alloc; // single contiguous allocation for both ping-pong buffers
+static uint32_t *v_out_sync_hblank;   // pre-filled H-blank line (H sync only)
+static uint32_t *v_out_sync_vsync;    // pre-filled V-sync line (VH sync)
 
 // ISR state (file-scope for reset in stop_vga)
 static uint16_t y = 0;
@@ -346,26 +347,32 @@ void start_vga()
 
   // allocate sync line buffers (pre-filled, never modified)
   v_out_sync_hblank = calloc(whole_line, sizeof(uint8_t));
+
   if (!v_out_sync_hblank)
     watchdog_reboot(0, 0, 0);
+
   memset((uint8_t *)v_out_sync_hblank, (NO_SYNC ^ video_mode.sync_polarity), whole_line);
   memset((uint8_t *)v_out_sync_hblank + h_sync_pulse_front, (H_SYNC ^ video_mode.sync_polarity), h_sync_pulse);
 
   v_out_sync_vsync = calloc(whole_line, sizeof(uint8_t));
+
   if (!v_out_sync_vsync)
     watchdog_reboot(0, 0, 0);
+
   memset((uint8_t *)v_out_sync_vsync, (V_SYNC ^ video_mode.sync_polarity), whole_line);
   memset((uint8_t *)v_out_sync_vsync + h_sync_pulse_front, (VH_SYNC ^ video_mode.sync_polarity), h_sync_pulse);
 
-  // allocate image line buffers (ping-pong, pre-filled with H-blank sync pattern)
-  v_out_dma_buf[0] = calloc(whole_line, sizeof(uint8_t));
-  if (!v_out_dma_buf[0])
-    watchdog_reboot(0, 0, 0);
-  memcpy((uint8_t *)v_out_dma_buf[0], (uint8_t *)v_out_sync_hblank, whole_line);
+  // Allocate ping-pong image line buffers as a single contiguous block so both
+  // buffers have identical SRAM bank access patterns (same alignment modulo 4),
+  // eliminating bus contention asymmetry between even and odd scanlines.
+  v_out_dma_buf_alloc = calloc(whole_line * 2, sizeof(uint8_t));
 
-  v_out_dma_buf[1] = calloc(whole_line, sizeof(uint8_t));
-  if (!v_out_dma_buf[1])
+  if (!v_out_dma_buf_alloc)
     watchdog_reboot(0, 0, 0);
+
+  v_out_dma_buf[0] = v_out_dma_buf_alloc;
+  v_out_dma_buf[1] = (uint32_t *)((uint8_t *)v_out_dma_buf_alloc + whole_line);
+  memcpy((uint8_t *)v_out_dma_buf[0], (uint8_t *)v_out_sync_hblank, whole_line);
   memcpy((uint8_t *)v_out_dma_buf[1], (uint8_t *)v_out_sync_hblank, whole_line);
 
   // PIO initialization
@@ -432,7 +439,7 @@ void start_vga()
   irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
   irq_set_enabled(DMA_IRQ_0, true);
 
-  dma_start_channel_mask((1u << dma_ch0));
+  dma_channel_start(dma_ch0);
 }
 
 void stop_vga()
@@ -456,18 +463,15 @@ void stop_vga()
   dma_channel_unclaim(dma_ch0);
   dma_channel_unclaim(dma_ch1);
 
-  // free image buffers
-  if (v_out_dma_buf[0] != NULL)
+  // free image buffers (single contiguous allocation)
+  if (v_out_dma_buf_alloc != NULL)
   {
-    free(v_out_dma_buf[0]);
-    v_out_dma_buf[0] = NULL;
+    free(v_out_dma_buf_alloc);
+    v_out_dma_buf_alloc = NULL;
   }
 
-  if (v_out_dma_buf[1] != NULL)
-  {
-    free(v_out_dma_buf[1]);
-    v_out_dma_buf[1] = NULL;
-  }
+  v_out_dma_buf[0] = NULL;
+  v_out_dma_buf[1] = NULL;
 
   // free sync buffers
   if (v_out_sync_hblank != NULL)

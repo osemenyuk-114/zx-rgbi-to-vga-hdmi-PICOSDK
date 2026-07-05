@@ -90,12 +90,12 @@ void __not_in_flash_func(epm3256_send)(uint8_t special_keys, uint8_t mouse_keys,
 
     // Wait for FIFO space and send
     while (PIO_SPI->fstat & (1u << (PIO_FSTAT_TXFULL_LSB + SM_SPI)))
-        ;
+        tight_loop_contents();
 
     PIO_SPI->txf[SM_SPI] = data0;
 
     while (PIO_SPI->fstat & (1u << (PIO_FSTAT_TXFULL_LSB + SM_SPI)))
-        ;
+        tight_loop_contents();
 
     PIO_SPI->txf[SM_SPI] = data1;
 }

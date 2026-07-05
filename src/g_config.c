@@ -51,6 +51,23 @@ video_mode_t mode_800x600_60Hz = {
     .div = 2,
 };
 
+video_mode_t mode_800x600_75Hz = {
+    .sys_freq = 248000,
+    .pixel_freq = 49600000.0,
+    .h_visible_area = 800,
+    .v_visible_area = 600,
+    .whole_line = 1056,
+    .whole_frame = 625,
+    .h_front_porch = 16,
+    .h_sync_pulse = 80,
+    .h_back_porch = 160,
+    .v_front_porch = 1,
+    .v_sync_pulse = 3,
+    .v_back_porch = 21,
+    .sync_polarity = 0b00000000, // positive
+    .div = 2,
+};
+
 video_mode_t mode_1024x768_60Hz_d3 = {
     .sys_freq = 260000,
     .pixel_freq = 65000000.0,
@@ -119,14 +136,15 @@ video_mode_t mode_1280x1024_60Hz_d4 = {
     .div = 4,
 };
 
-video_mode_t *video_modes[] = {
-    &mode_640x480_60Hz,
-    &mode_720x576_50Hz,
-    &mode_800x600_60Hz,
-    &mode_1024x768_60Hz_d3,
-    &mode_1024x768_60Hz_d4,
-    &mode_1280x1024_60Hz_d3,
-    &mode_1280x1024_60Hz_d4,
+video_mode_t *video_modes[VIDEO_MODE_MAX + 1] = {
+    [MODE_640x480_60Hz] = &mode_640x480_60Hz,
+    [MODE_720x576_50Hz] = &mode_720x576_50Hz,
+    [MODE_800x600_60Hz] = &mode_800x600_60Hz,
+    [MODE_800x600_75Hz] = &mode_800x600_75Hz,
+    [MODE_1024x768_60Hz_d3] = &mode_1024x768_60Hz_d3,
+    [MODE_1024x768_60Hz_d4] = &mode_1024x768_60Hz_d4,
+    [MODE_1280x1024_60Hz_d3] = &mode_1280x1024_60Hz_d3,
+    [MODE_1280x1024_60Hz_d4] = &mode_1280x1024_60Hz_d4,
 };
 
 uint8_t g_v_buf[V_BUF_SZ * 3];

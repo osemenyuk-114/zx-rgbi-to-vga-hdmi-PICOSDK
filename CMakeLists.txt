@@ -17,7 +17,7 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 # =============================================================================
 
 # Board variant (pass -DBOARD=BOARD_XXX to override)
-# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_RP2040_ZERO
+# Supported: BOARD_36LJU22, BOARD_38LJE24, BOARD_38LJU24, BOARD_RP2040_ZERO
 #            BOARD_11XGA24_1, BOARD_11XGA24_2,
 #            BOARD_LEO_V2, BOARD_LEO_V3, BOARD_LEO_V3_2040BT 
 #            BOARD_09LJV23
@@ -25,6 +25,7 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 if(NOT DEFINED BOARD)
     set(BOARD "BOARD_36LJU22")
     # set(BOARD "BOARD_38LJE24")
+    # set(BOARD "BOARD_38LJU24")
     # set(BOARD "BOARD_RP2040_ZERO")
     # set(BOARD "BOARD_11XGA24_1")
     # set(BOARD "BOARD_11XGA24_2")
@@ -101,6 +102,12 @@ elseif(BOARD STREQUAL "BOARD_38LJE24" OR BOARD STREQUAL "BOARD_LEO_V3" OR BOARD 
     set(PS2_KBD_ENABLE ON)
     set(USB_KBD_ENABLE ON)
     set(SERIAL_MENU_ENABLE OFF)
+elseif(BOARD STREQUAL "BOARD_38LJU24")
+    set(OSD_MENU_ENABLE ON)
+    set(OSD_FF_ENABLE ON)
+    set(PS2_KBD_ENABLE OFF)
+    set(USB_KBD_ENABLE OFF)
+    set(SERIAL_MENU_ENABLE ON)
 elseif(BOARD STREQUAL "BOARD_11XGA24_1" OR BOARD STREQUAL "BOARD_11XGA24_2")
     set(OSD_MENU_ENABLE ON)
     set(OSD_FF_ENABLE OFF)
@@ -268,10 +275,6 @@ target_compile_options(${EXECUTABLE_NAME} PRIVATE
 
 # Add compile definitions for board variant and Pico version
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE ${BOARD})
-
-if(USE_PICO2)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE USE_PICO2)
-endif()
 
 # Add compile definitions for OSD features
 if(OSD_MENU_ENABLE)

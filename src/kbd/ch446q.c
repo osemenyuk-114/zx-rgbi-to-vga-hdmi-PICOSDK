@@ -27,7 +27,7 @@ void __not_in_flash_func(ch446q_set_switch)(int Y, int X, bool state)
     data <<= 24;
 
     while (PIO_CH446Q->fstat & (1u << (PIO_FSTAT_TXFULL_LSB + SM_CH446Q)))
-        ;
+        tight_loop_contents();
 
     PIO_CH446Q->txf[SM_CH446Q] = data;
 }

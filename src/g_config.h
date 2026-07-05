@@ -55,9 +55,24 @@
 #define OSD_BTN_DOWN 27
 #define OSD_BTN_SEL 28
 
-#elif defined(BOARD_38LJE24)
+#ifdef BOARD_LEO_V2
+#define HW_CONFIG_ENABLE
+#define HW_PIN_ROM_BANK_D0 20
+#define HW_PIN_ROM_BANK_D1 21
+#define HW_PIN_ROM_BANK_D2 22
+#define HW_PIN_GOTEK_DRIVE_D0 23
+#define HW_PIN_GOTEK_DRIVE_D1 24
+#define HW_PIN_RAM_SIZE 25
+#endif
 
+#elif defined(BOARD_38LJE24) || defined(BOARD_38LJU24)
+
+#ifdef BOARD_38LJE24
 #define HW_VERSION "38LJE24"
+#else
+#define HW_VERSION "38LJU24"
+#endif
+
 #define VIDEO_OUTPUT_AUTO_DETECT
 #define DVI_PINS_REVERSED // DVI pins are in reverse order (D0 is the last pin, D5 is the first)
 #define DVI_PIN_D0 14
@@ -76,6 +91,10 @@
 #define KBD_PIN_DATA 2
 #define KBD_PIN_CLK 3
 #define KBD_PIN_STB 4
+
+#ifdef PICO_RP2350
+// #define USE_HSTX
+#endif
 
 #elif defined(BOARD_11XGA24_1) || defined(BOARD_11XGA24_2)
 
@@ -135,6 +154,7 @@
 
 // Buttons are not connected to GPIOs on LEO v3.0, so use the same GPIOs as the ROM bank pins for OSD buttons
 // Inputs are internally overriden and are read as HIGH to avoid OSD menu navigation issues
+#define NO_OSD_BUTTONS
 #define OSD_BTN_UP 20
 #define OSD_BTN_DOWN 21
 #define OSD_BTN_SEL 22
@@ -144,6 +164,7 @@
 #define KBD_PIN_DATA 7
 #define KBD_PIN_CLK 26
 #define KBD_PIN_STB 27
+
 #define HW_PIN_ROM_BANK_D0 20
 #define HW_PIN_ROM_BANK_D1 21
 #define HW_PIN_ROM_BANK_D2 22
@@ -230,7 +251,7 @@ typedef enum video_out_mode_t
   VIDEO_MODE_MIN,
   MODE_640x480_60Hz = VIDEO_MODE_MIN,
   MODE_720x576_50Hz,
-  VIDEO_MODE_DVI_MAX = MODE_720x576_50Hz,
+  MODE_800x600_75Hz,
   MODE_800x600_60Hz,
   MODE_1024x768_60Hz_d3,
   MODE_1024x768_60Hz_d4,
@@ -238,6 +259,12 @@ typedef enum video_out_mode_t
   MODE_1280x1024_60Hz_d4,
   VIDEO_MODE_MAX = MODE_1280x1024_60Hz_d4,
 } video_out_mode_t;
+
+#ifndef USE_HSTX
+#define VIDEO_MODE_DVI_MAX MODE_720x576_50Hz
+#else
+#define VIDEO_MODE_DVI_MAX MODE_800x600_75Hz
+#endif
 
 typedef enum cap_sync_mode_t
 {
@@ -265,7 +292,7 @@ typedef struct ff_osd_config_t
 
 #endif
 
-#if defined(BOARD_LEO_V3) || defined(BOARD_LEO_V3_2040BT)
+#ifdef HW_CONFIG_ENABLE
 typedef struct hw_config_t
 {
   uint8_t rom_bank;    // 1-8
@@ -282,6 +309,7 @@ typedef struct hw_config_t
 #define HW_ROM_BANK_DEF 1
 #define HW_RAM_SIZE_DEF true
 #define HW_GOTEK_DRIVE_DEF 1
+
 #endif
 
 typedef struct settings_t
@@ -301,7 +329,7 @@ typedef struct settings_t
 #ifdef OSD_FF_ENABLE
   ff_osd_config_t ff_osd_config;
 #endif
-#if defined(BOARD_LEO_V3) || defined(BOARD_LEO_V3_2040BT)
+#ifdef HW_CONFIG_ENABLE
   hw_config_t hw_config;
 #endif
   uint32_t crc;
@@ -333,7 +361,7 @@ extern video_mode_t mode_1024x768_60Hz_d4;
 extern video_mode_t mode_1280x1024_60Hz_d3;
 extern video_mode_t mode_1280x1024_60Hz_d4;
 
-extern video_mode_t *video_modes[];
+extern video_mode_t *video_modes[VIDEO_MODE_MAX + 1];
 
 extern uint8_t g_v_buf[];
 

@@ -757,6 +757,9 @@ static void render_output_menu()
     const char *mode_names_dvi[] = {
         "640X480@60",
         "720X576@50",
+#ifdef USE_HSTX
+        "800X600@75",
+#endif
     };
     const char *mode_names_vga[] = {
         "640X480@60",
@@ -799,6 +802,10 @@ static void render_output_menu()
                     current_mode_name = mode_names_dvi[0];
                 else if (settings.video_out_mode == MODE_720x576_50Hz)
                     current_mode_name = mode_names_dvi[1];
+#ifdef USE_HSTX
+                else if (settings.video_out_mode == MODE_800x600_75Hz)
+                    current_mode_name = mode_names_dvi[2];
+#endif
             }
             else
             {
@@ -1225,6 +1232,9 @@ void osd_adjust_video_mode(int8_t direction)
     video_out_mode_t modes_dvi[] = {
         MODE_640x480_60Hz,
         MODE_720x576_50Hz,
+#ifdef USE_HSTX
+        MODE_800x600_75Hz,
+#endif
     };
     video_out_mode_t modes_vga[] = {
         MODE_640x480_60Hz,

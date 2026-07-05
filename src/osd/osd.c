@@ -429,7 +429,7 @@ void osd_update()
 
 void osd_buttons_init()
 {
-#ifndef HW_CONFIG_ENABLE
+#ifndef NO_OSD_BUTTONS
     // Configure button pins as inputs with pull-up
     gpio_init(OSD_BTN_UP);
     gpio_set_dir(OSD_BTN_UP, GPIO_IN);

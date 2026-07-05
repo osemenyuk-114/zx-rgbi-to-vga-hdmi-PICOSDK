@@ -360,7 +360,7 @@ void start_capture()
   irq_set_exclusive_handler(DMA_IRQ_1, dma_handler_capture);
   irq_set_enabled(DMA_IRQ_1, true);
 
-  dma_start_channel_mask((1u << dma_ch0));
+  dma_channel_start(dma_ch0);
 }
 
 void stop_capture()

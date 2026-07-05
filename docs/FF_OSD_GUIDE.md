@@ -31,6 +31,7 @@ Pin assignments depend on the board variant:
 | 36LJU22        | GPIO16 | GPIO17 |
 | RP2040_ZERO    | GPIO18 | GPIO19 |
 | 38LJE24        | GPIO20 | GPIO21 |
+| 38LJU24        | GPIO20 | GPIO21 |
 | LEO_V2         | GPIO18 | GPIO19 |
 | LEO_V3         | GPIO18 | GPIO19 |
 | LEO_V3_2040BT  | GPIO16 | GPIO17 |
@@ -284,7 +285,7 @@ display-off-secs = 255
 
 Factory defaults for FF OSD settings are:
 
-- Enabled: **No** on `36LJU22`, `RP2040_ZERO`, `38LJE24`, `09LJV23`; **Yes** on `LEO_V2`, `LEO_V3`, `LEO_V3_2040BT`
+- Enabled: **No** on `36LJU22`, `RP2040_ZERO`, `38LJE24`, `38LJU24`, `09LJV23`; **Yes** on `LEO_V2`, `LEO_V3`, `LEO_V3_2040BT`
 - Protocol: **FlashFloppy**
 - Columns: **40**
 - Rows: **3**
