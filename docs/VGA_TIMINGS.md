@@ -28,26 +28,26 @@
 
 ## Extended Timing Parameters for Supported DVI Video Modes
 
-| Mode                                  | 640 x 480     | 720 x 576     |
-|---------------------------------------|--------------:|--------------:|
-| **Screen refresh rate**               | 60 Hz         | 50 Hz         |
-| **Vertical refresh**                  | 31.469 kHz    | 31.25 kHz     |
-| **Pixel frequency**                   | 25.175 MHz    | 27.0 MHz      |
-|                                       |               |               |
-| **Horizontal timing (line)**          |               |               |
-| **Polarity of horizontal sync pulse** | negative      | negative      |
-| **Scanline part**                     | **Pixels**    | **Pixels**    |
-| **Visible area**                      | 640           | 720           |
-| **Front porch**                       | 16            | 12            |
-| **Sync pulse**                        | 96            | 64            |
-| **Back porch**                        | 48            | 68            |
-| **Whole line**                        | 800           | 864           |
-|                                       |               |               |
-| **Vertical timing (frame)**           |               |               |
-| **Polarity of vertical sync pulse**   | negative      | negative      |
-| **Frame part**                        | **Lines**     | **Lines**     |
-| **Visible area**                      | 480           | 576           |
-| **Front porch**                       | 10            | 5             |
-| **Sync pulse**                        | 2             | 5             |
-| **Back porch**                        | 33            | 39            |
-| **Whole frame**                       | 525           | 625           |
+| Mode                                  | 640 x 480     | 720 x 576     | 800 x 600     |
+|---------------------------------------|--------------:|--------------:|--------------:|
+| **Screen refresh rate**               | 60 Hz         | 50 Hz         | 75 Hz         |
+| **Vertical refresh**                  | 31.469 kHz    | 31.25 kHz     | 46.875 kHz    |
+| **Pixel frequency**                   | 25.175 MHz    | 27.0 MHz      | 49.5 MHz      |
+|                                       |               |               |               |
+| **Horizontal timing (line)**          |               |               |               |
+| **Polarity of horizontal sync pulse** | negative      | negative      | positive      |
+| **Scanline part**                     | **Pixels**    | **Pixels**    | **Pixels**    |
+| **Visible area**                      | 640           | 720           | 800           |
+| **Front porch**                       | 16            | 12            | 16            |
+| **Sync pulse**                        | 96            | 64            | 80            |
+| **Back porch**                        | 48            | 68            | 160           |
+| **Whole line**                        | 800           | 864           | 1056          |
+|                                       |               |               |               |
+| **Vertical timing (frame)**           |               |               |               |
+| **Polarity of vertical sync pulse**   | negative      | negative      | positive      |
+| **Frame part**                        | **Lines**     | **Lines**     | **Lines**     |
+| **Visible area**                      | 480           | 576           | 600           |
+| **Front porch**                       | 10            | 5             | 1             |
+| **Sync pulse**                        | 2             | 5             | 3             |
+| **Back porch**                        | 33            | 39            | 21            |
+| **Whole frame**                       | 525           | 625           | 625           |

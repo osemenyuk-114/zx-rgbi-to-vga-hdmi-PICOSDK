@@ -95,7 +95,7 @@ void print_video_out_menu()
     {
     case DVI:
         printf("  2    720x576 @50Hz (div 2)\n");
-#ifdef USE_HSTX
+#ifdef DVI_USE_HSTX
         printf("  3    800x600 @75Hz (div 2)\n");
 #endif
         break;
@@ -669,7 +669,7 @@ void handle_serial_menu()
                         settings.video_out_mode = MODE_1024x768_60Hz_d3;
                         print_video_out_mode();
                     }
-#ifdef USE_HSTX
+#ifdef DVI_USE_HSTX
                     else
                     {
                         settings.video_out_mode = MODE_800x600_75Hz;
@@ -1463,7 +1463,9 @@ void handle_serial_menu()
 
         case 'w':
             printf("  Saving settings...\n");
+            stop_video_output();
             save_settings(&settings);
+            start_video_output(active_video_output);
             inchar = 0;
             break;
 

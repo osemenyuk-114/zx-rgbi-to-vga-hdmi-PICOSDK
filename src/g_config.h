@@ -9,7 +9,7 @@
 #include "pico.h"
 #include "pico/time.h"
 
-#define FW_VER "v1.8.1"
+#define FW_VER "v1.9.0"
 
 #if PICO_RP2350
 #define FW_VERSION FW_VER " (PICO 2)"
@@ -93,7 +93,7 @@
 #define KBD_PIN_STB 4
 
 #ifdef PICO_RP2350
-// #define USE_HSTX
+#define DVI_USE_HSTX
 #endif
 
 #elif defined(BOARD_11XGA24_1) || defined(BOARD_11XGA24_2)
@@ -260,7 +260,7 @@ typedef enum video_out_mode_t
   VIDEO_MODE_MAX = MODE_1280x1024_60Hz_d4,
 } video_out_mode_t;
 
-#ifndef USE_HSTX
+#ifndef DVI_USE_HSTX
 #define VIDEO_MODE_DVI_MAX MODE_720x576_50Hz
 #else
 #define VIDEO_MODE_DVI_MAX MODE_800x600_75Hz

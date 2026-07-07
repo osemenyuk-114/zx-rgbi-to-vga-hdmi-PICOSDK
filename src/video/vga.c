@@ -2,6 +2,7 @@
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include "hardware/watchdog.h"
+#include "hardware/structs/bus_ctrl.h"
 
 #include "g_config.h"
 #include "vga.h"
@@ -439,6 +440,7 @@ void start_vga()
   irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
   irq_set_enabled(DMA_IRQ_0, true);
 
+  bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
   dma_channel_start(dma_ch0);
 }
 

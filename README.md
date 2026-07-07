@@ -25,7 +25,11 @@ For detailed hardware and original software information, see the upstream projec
 
 - **Video Output:**
   - VGA output with selectable resolutions: 640×480 @60Hz, 800×600 @60Hz, 1024×768 @60Hz, 1280×1024 @60Hz.
-  - HDMI (DVI) resolutions: 640×480 @60Hz and 720×576 @50Hz.
+  - HDMI (DVI) output:
+    - **PIO backend:** 640×480 @60Hz, 720×576 @50Hz.
+    - **HSTX backend:** 640×480 @60Hz, 720×576 @50Hz, 800×600 @75Hz.
+      > Requires board variant **38LJE24 / 38LJU24** with an RP2350 chip. HSTX on RP2350 is hardwired to GPIO 12–19; only these boards route those pins to the DVI connector. On all other boards, or when building for RP2040, the PIO backend is used automatically.
+    - Both backends share a single `dvi.c` file; backend selected at compile time.
   - Optional scanline effect on the VGA output at higher resolutions for a retro look.
   - "NO SIGNAL" message when no input is detected.
 - **Keyboard Input:**
@@ -77,6 +81,10 @@ For detailed hardware and original software information, see the upstream projec
 ---
 
 ## Recent Improvements
+
+- DVI Driver Unification (RP2040 + RP2350).
+- DVI: Added 800×600 @75Hz as a third HSTX DVI output mode.
+- Code Cleanup
 
 ### Keyboard Support
 
