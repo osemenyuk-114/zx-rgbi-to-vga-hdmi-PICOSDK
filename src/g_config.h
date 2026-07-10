@@ -9,7 +9,7 @@
 #include "pico.h"
 #include "pico/time.h"
 
-#define FW_VER "v1.9.0"
+#define FW_VER "v1.8.2"
 
 #if PICO_RP2350
 #define FW_VERSION FW_VER " (PICO 2)"
@@ -55,16 +55,6 @@
 #define OSD_BTN_DOWN 27
 #define OSD_BTN_SEL 28
 
-#ifdef BOARD_LEO_V2
-#define HW_CONFIG_ENABLE
-#define HW_PIN_ROM_BANK_D0 20
-#define HW_PIN_ROM_BANK_D1 21
-#define HW_PIN_ROM_BANK_D2 22
-#define HW_PIN_GOTEK_DRIVE_D0 23
-#define HW_PIN_GOTEK_DRIVE_D1 24
-#define HW_PIN_RAM_SIZE 25
-#endif
-
 #elif defined(BOARD_38LJE24) || defined(BOARD_38LJU24)
 
 #ifdef BOARD_38LJE24
@@ -91,10 +81,6 @@
 #define KBD_PIN_DATA 2
 #define KBD_PIN_CLK 3
 #define KBD_PIN_STB 4
-
-#ifdef PICO_RP2350
-#define DVI_USE_HSTX
-#endif
 
 #elif defined(BOARD_11XGA24_1) || defined(BOARD_11XGA24_2)
 
@@ -251,7 +237,7 @@ typedef enum video_out_mode_t
   VIDEO_MODE_MIN,
   MODE_640x480_60Hz = VIDEO_MODE_MIN,
   MODE_720x576_50Hz,
-  MODE_800x600_75Hz,
+  VIDEO_MODE_DVI_MAX = MODE_720x576_50Hz,
   MODE_800x600_60Hz,
   MODE_1024x768_60Hz_d3,
   MODE_1024x768_60Hz_d4,
@@ -259,12 +245,6 @@ typedef enum video_out_mode_t
   MODE_1280x1024_60Hz_d4,
   VIDEO_MODE_MAX = MODE_1280x1024_60Hz_d4,
 } video_out_mode_t;
-
-#ifndef DVI_USE_HSTX
-#define VIDEO_MODE_DVI_MAX MODE_720x576_50Hz
-#else
-#define VIDEO_MODE_DVI_MAX MODE_800x600_75Hz
-#endif
 
 typedef enum cap_sync_mode_t
 {
@@ -352,14 +332,6 @@ typedef struct video_mode_t
   uint8_t sync_polarity;
   uint8_t div;
 } video_mode_t;
-
-extern video_mode_t mode_640x480_60Hz;
-extern video_mode_t mode_720x576_50Hz;
-extern video_mode_t mode_800x600_60Hz;
-extern video_mode_t mode_1024x768_60Hz_d3;
-extern video_mode_t mode_1024x768_60Hz_d4;
-extern video_mode_t mode_1280x1024_60Hz_d3;
-extern video_mode_t mode_1280x1024_60Hz_d4;
 
 extern video_mode_t *video_modes[VIDEO_MODE_MAX + 1];
 

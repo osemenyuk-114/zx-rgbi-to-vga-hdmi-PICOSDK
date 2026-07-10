@@ -231,7 +231,6 @@ static void __not_in_flash_func(dma_handler_vga)()
       for (; x < osd_mode.start_x; x++)
       {
         scr_line++;
-
         *line_buf++ = palette[0];
       }
 
@@ -248,7 +247,6 @@ static void __not_in_flash_func(dma_handler_vga)()
     for (; x < osd_mode.end_x; x++)
     { // handle remaining bytes (0-3 bytes)
       scr_line++;
-
       *line_buf++ = palette[*osd_line++];
     }
 
@@ -363,9 +361,7 @@ void start_vga()
   memset((uint8_t *)v_out_sync_vsync, (V_SYNC ^ video_mode.sync_polarity), whole_line);
   memset((uint8_t *)v_out_sync_vsync + h_sync_pulse_front, (VH_SYNC ^ video_mode.sync_polarity), h_sync_pulse);
 
-  // Allocate ping-pong image line buffers as a single contiguous block so both
-  // buffers have identical SRAM bank access patterns (same alignment modulo 4),
-  // eliminating bus contention asymmetry between even and odd scanlines.
+  // Ping-pong image line buffers as a single contiguous block
   v_out_dma_buf_alloc = calloc(whole_line * 2, sizeof(uint8_t));
 
   if (!v_out_dma_buf_alloc)
@@ -432,7 +428,7 @@ void start_vga()
       1,                              //
       false                           // don't start yet
   );
-
+  // IRQ setup
   dma_channel_set_irq0_enabled(dma_ch1, true);
 
   // configure the processor to run dma_handler_vga() when DMA IRQ 0 is asserted
@@ -441,6 +437,7 @@ void start_vga()
   irq_set_enabled(DMA_IRQ_0, true);
 
   bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
+
   dma_channel_start(dma_ch0);
 }
 

@@ -67,7 +67,7 @@ EXIT
 **Note:**
 
 - **FF OSD CONFIG** is available on firmware builds with FlashFloppy OSD support enabled
-- **HARDWARE CONFIG** is available on LEO V2, LEO V3, and LEO V3 2040BT board variants
+- **HARDWARE CONFIG** is available on LEO V3 and LEO V3 2040BT board variants
 
 ### OUTPUT SETTINGS
 
@@ -87,8 +87,7 @@ BUFFERING    X1/X3           - Frame buffering mode
 
 **Available Modes:**
 
-- **DVI (PIO):** 640×480@60Hz, 720×576@50Hz
-- **DVI (HSTX / RP2350):** 640×480@60Hz, 720×576@50Hz, 800×600@75Hz
+- **DVI:** 640×480@60Hz, 720×576@50Hz
 - **VGA:** 640×480@60Hz, 800×600@60Hz, 1024×768@60Hz, 1280×1024@60Hz (DIV3/DIV4)
 
 ### CAPTURE SETTINGS
@@ -209,7 +208,7 @@ To avoid duplicating protocol behavior, addresses, host-side configuration, and 
 
 ### HARDWARE CONFIG
 
-> Available on **LEO V2**, **LEO V3**, and **LEO V3 2040BT** board variants.
+> Available on **LEO V3** and **LEO V3 2040BT** board variants only.
 
 ```text
 ROM BANK    [1..8]
@@ -232,9 +231,7 @@ GOTEK DRIVE OFF / A / B
 **GPIO effect timing:**
 
 - **RAM (KB)** and **GOTEK DRIVE** take effect immediately via GPIO when changed.
-- **ROM BANK** timing depends on the board variant:
-  - **LEO V3 / LEO V3 2040BT** (keyboard supported): applied to GPIO immediately before the next **RESET** (**F12** key press); changing it in the menu updates the stored value but does not switch the bank until reset.
-  - **LEO V2** (no keyboard): applied to GPIO only after a **full power cycle**; the new bank becomes active only after powering the board off and on again.
+- **ROM BANK** is applied to GPIO immediately before the next **RESET** (**F12** key press); changing it in the menu updates the stored value but does not switch the bank until reset.
 
 Use **SAVE** from the main menu to persist the values across reboot.
 

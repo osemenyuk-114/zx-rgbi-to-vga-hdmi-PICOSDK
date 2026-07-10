@@ -49,7 +49,7 @@ static const uint I2C_SLAVE_SCL_PIN = I2C_PIN_SCL;
 #define FF_OSD_BUTTON_RIGHT 2
 #define FF_OSD_BUTTON_SELECT 4
 
-#define FF_OSD_BUTTON_PULSE_FRAMES 6
+#define FF_OSD_BUTTON_PULSE_FRAMES 30
 
 #define FF_OSD_KBD_TIMEOUT_US 10000000 // 10 seconds — same as OSD menu timeout
 
@@ -447,7 +447,15 @@ void ff_osd_update()
         return;
     }
 
+    // When OSD_MENU_ENABLE is active, osd_menu_update() already called
+    // osd_buttons_update() for this frame. Calling it again would process
+    // the GPIO state a second time: in the held path sel_pressed is not
+    // re-set, but in the release path it is cleared — so a button released
+    // between the two calls (or a bounce) silently kills sel_pressed before
+    // the pulse logic below ever sees it.
+#ifndef OSD_MENU_ENABLE
     osd_buttons_update();
+#endif
     // Map OSD button presses to FF OSD button codes
     uint8_t buttons = 0;
 
@@ -488,35 +496,34 @@ void ff_osd_update()
     }
     else if (settings.ff_osd_config.i2c_protocol)
     {
-#ifdef OSD_MENU_ENABLE
-        uint64_t current_time = time_us_64();
-
-        // When local OSD menu is enabled, reserve long holds for menu activation.
-        // Short taps are forwarded on release as brief host button pulses.
-        bool sel_held = osd_button_held(2);
-        if (!sel_held && ff_btn_prev_held)
+        // Release-triggered pulse: SELECT is forwarded on button release as a
+        // brief pulse, but ONLY for short taps (< OSD_HOLD_US).  Long holds that
+        // open the local OSD menu are suppressed — the Gotek never sees SELECT
+        // during the hold that triggered the menu.  The pulse duration (30 frames
+        // ≈ 500 ms) is long enough for FlashFloppy to catch on its next I2C poll.
+        // This mechanism is reliable because osd_buttons_update() is called only
+        // once per frame when OSD_MENU_ENABLE is active (#ifndef guard above).
         {
-            uint64_t hold_us = current_time - osd_buttons.key_hold_start[2];
-            if (hold_us < OSD_HOLD_US)
-                ff_btn_pulse_frames = FF_OSD_BUTTON_PULSE_FRAMES;
+            bool sel_held = osd_button_held(2);
+
+            if (!sel_held && ff_btn_prev_held)
+            {
+                uint64_t hold_us = time_us_64() - osd_buttons.key_hold_start[2];
+
+                if (hold_us < OSD_HOLD_US)
+                    ff_btn_pulse_frames = FF_OSD_BUTTON_PULSE_FRAMES;
+            }
+
+            ff_btn_prev_held = sel_held;
         }
-        ff_btn_prev_held = sel_held;
 
         if (ff_btn_pulse_frames > 0)
         {
             buttons |= FF_OSD_BUTTON_SELECT;
             ff_btn_pulse_frames--;
         }
-#else
-        // With menu disabled, do not suppress long presses in FlashFloppy mode.
-        ff_btn_prev_held = false;
-        ff_btn_pulse_frames = 0;
-
-        if (osd_button_pressed(2)) // SEL -> SELECT
-            buttons |= FF_OSD_BUTTON_SELECT;
-#endif
     }
-    else if (!settings.ff_osd_config.i2c_protocol)
+    else
     {
         // LCD mode: preserve previous immediate-press behavior.
         ff_btn_prev_held = false;
@@ -617,13 +624,23 @@ void ff_osd_update()
             // Print the entire row at once with the appropriate height
             osd_text_print(osd_row, 0, row_text, fg_color, bg_color, is_double_height);
         }
+
+        osd_state.text_updated = true;
+        osd_state.needs_redraw = true;
+
+        // Throttle rendering: Gotek updates display content infrequently (≤ a few
+        // times/sec), but ff_osd_update runs at the full frame rate.  Calling
+        // osd_render_text_to_buffer every frame floods the SRAM bus with ~5K
+        // pixel writes.  Limiting to every 4th frame (~18 fps effective)
+        // is imperceptible on a Gotek display while restoring margin.
+        static uint8_t render_skip = 0;
+
+        if (++render_skip >= 4)
+        {
+            render_skip = 0;
+            osd_render_text_to_buffer();
+        }
     }
-
-    // Always mark that text buffer needs to be rendered
-    osd_state.text_updated = true;
-    osd_state.needs_redraw = true;
-
-    osd_render_text_to_buffer();
 
     osd_state.visible = ff_osd_display.on || ff_osd_kbd_active;
 }
