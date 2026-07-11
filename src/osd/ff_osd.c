@@ -503,19 +503,17 @@ void ff_osd_update()
         // ≈ 500 ms) is long enough for FlashFloppy to catch on its next I2C poll.
         // This mechanism is reliable because osd_buttons_update() is called only
         // once per frame when OSD_MENU_ENABLE is active (#ifndef guard above).
+        bool sel_held = osd_button_held(2);
+
+        if (!sel_held && ff_btn_prev_held)
         {
-            bool sel_held = osd_button_held(2);
+            uint64_t hold_us = time_us_64() - osd_buttons.key_hold_start[2];
 
-            if (!sel_held && ff_btn_prev_held)
-            {
-                uint64_t hold_us = time_us_64() - osd_buttons.key_hold_start[2];
-
-                if (hold_us < OSD_HOLD_US)
-                    ff_btn_pulse_frames = FF_OSD_BUTTON_PULSE_FRAMES;
-            }
-
-            ff_btn_prev_held = sel_held;
+            if (hold_us < OSD_HOLD_US)
+                ff_btn_pulse_frames = FF_OSD_BUTTON_PULSE_FRAMES;
         }
+
+        ff_btn_prev_held = sel_held;
 
         if (ff_btn_pulse_frames > 0)
         {
