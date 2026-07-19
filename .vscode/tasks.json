@@ -4,10 +4,27 @@
         {
             "label": "CMake Configure",
             "type": "process",
-            "command": "cmake",
-            "args": ["-B", "${workspaceFolder}/build", "-G", "Ninja", "--fresh"],
+            "command": "${userHome}/.pico-sdk/cmake/v4.4.0/bin/cmake",
+            "args": [
+                "-B", "${workspaceFolder}/build",
+                "-G", "Ninja",
+                "--fresh"
+            ],
+            "options": {
+                "env": {
+                    "PATH": "${userHome}/.pico-sdk/toolchain/15_2_Rel1/bin;${env:PATH}"
+                }
+            },
+            "windows": {
+                "command": "${env:USERPROFILE}/.pico-sdk/cmake/v4.4.0/bin/cmake.EXE",
+                "options": {
+                    "env": {
+                        "PATH": "${env:USERPROFILE}/.pico-sdk/toolchain/15_2_Rel1/bin;${env:PATH}"
+                    }
+                }
+            },
             "presentation": {
-                "reveal": "silent",
+                "reveal": "always",
                 "panel": "shared"
             },
             "problemMatcher": []
@@ -16,7 +33,7 @@
             "label": "Compile Project",
             "type": "process",
             "isBuildCommand": true,
-            "command": "${userHome}/.pico-sdk/ninja/v1.12.1/ninja",
+            "command": "${userHome}/.pico-sdk/ninja/v1.13.2/ninja",
             "args": ["-C", "${workspaceFolder}/build"],
             "group": "build",
             "presentation": {
@@ -25,13 +42,13 @@
             },
             "problemMatcher": "$gcc",
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/ninja/v1.12.1/ninja.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/ninja/v1.13.2/ninja.exe"
             }
         },
         {
             "label": "Run Project",
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
+            "command": "${userHome}/.pico-sdk/picotool/2.3.0/picotool/picotool",
             "args": [
                 "load",
                 "${command:raspberry-pi-pico.launchTargetPath}",
@@ -43,13 +60,13 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.3.0/picotool/picotool.exe"
             }
         },
         {
             "label": "Reset to BOOTSEL",
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
+            "command": "${userHome}/.pico-sdk/picotool/2.3.0/picotool/picotool",
             "args": [
                 "reboot",
                 "-f",
@@ -61,7 +78,7 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.3.0/picotool/picotool.exe"
             }
         },
         {
@@ -72,7 +89,7 @@
                 "Reset to BOOTSEL"
             ],
             "type": "process",
-            "command": "${env:HOME}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool",
+            "command": "${userHome}/.pico-sdk/picotool/2.3.0/picotool/picotool",
             "args": [
                 "load",
                 "${command:raspberry-pi-pico.launchTargetPath}",
@@ -84,7 +101,7 @@
             },
             "problemMatcher": [],
             "windows": {
-                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
+                "command": "${env:USERPROFILE}/.pico-sdk/picotool/2.3.0/picotool/picotool.exe"
             },
             "group": {
                 "kind": "build",
