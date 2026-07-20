@@ -95,6 +95,10 @@ void print_video_out_menu()
     {
     case DVI:
         printf("  2    720x576 @50Hz (div 2)\n");
+#ifdef DVI_USE_HSTX
+        printf("  3    800x600 @72Hz (div 2)\n");
+        printf("  4    800x600 @75Hz (div 2)\n");
+#endif
         break;
 
     case VGA:
@@ -277,8 +281,16 @@ void print_video_out_mode()
     case MODE_800x600_60Hz:
         printf("800x600 @60Hz\n");
         break;
+#ifdef DVI_USE_HSTX
+    case MODE_800x600_72Hz:
+        printf("800x600 @72Hz\n");
+        break;
 
-    case MODE_1024x768_60Hz_d3:
+    case MODE_800x600_75Hz:
+        printf("800x600 @75Hz\n");
+        break;
+#endif
+        case MODE_1024x768_60Hz_d3:
         printf("1024x768 @60Hz (div 3)\n");
         break;
 
@@ -662,7 +674,13 @@ void handle_serial_menu()
                         settings.video_out_mode = MODE_1024x768_60Hz_d3;
                         print_video_out_mode();
                     }
-
+#ifdef DVI_USE_HSTX
+                    else
+                    {
+                        settings.video_out_mode = MODE_800x600_72Hz;
+                        print_video_out_mode();
+                    }
+#endif
                     break;
 
                 case '4':
@@ -671,7 +689,13 @@ void handle_serial_menu()
                         settings.video_out_mode = MODE_1024x768_60Hz_d4;
                         print_video_out_mode();
                     }
-
+#ifdef DVI_USE_HSTX
+                    else
+                    {
+                        settings.video_out_mode = MODE_800x600_75Hz;
+                        print_video_out_mode();
+                    }
+#endif
                     break;
 
                 case '5':

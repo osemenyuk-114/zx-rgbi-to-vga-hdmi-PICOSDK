@@ -82,6 +82,10 @@
 #define KBD_PIN_CLK 3
 #define KBD_PIN_STB 4
 
+#if defined(PICO_RP2350)
+#define DVI_USE_HSTX
+#endif
+
 #elif defined(BOARD_11XGA24_1) || defined(BOARD_11XGA24_2)
 
 #define HW_VERSION "11XGA24"
@@ -237,7 +241,8 @@ typedef enum video_out_mode_t
   VIDEO_MODE_MIN,
   MODE_640x480_60Hz = VIDEO_MODE_MIN,
   MODE_720x576_50Hz,
-  VIDEO_MODE_DVI_MAX = MODE_720x576_50Hz,
+  MODE_800x600_72Hz,
+  MODE_800x600_75Hz,
   MODE_800x600_60Hz,
   MODE_1024x768_60Hz_d3,
   MODE_1024x768_60Hz_d4,
@@ -245,6 +250,12 @@ typedef enum video_out_mode_t
   MODE_1280x1024_60Hz_d4,
   VIDEO_MODE_MAX = MODE_1280x1024_60Hz_d4,
 } video_out_mode_t;
+
+#ifndef DVI_USE_HSTX
+#define VIDEO_MODE_DVI_MAX MODE_720x576_50Hz
+#else
+#define VIDEO_MODE_DVI_MAX MODE_800x600_75Hz
+#endif
 
 typedef enum cap_sync_mode_t
 {

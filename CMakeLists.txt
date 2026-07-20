@@ -23,9 +23,9 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 #            BOARD_09LJV23
 #
 if(NOT DEFINED BOARD)
-    set(BOARD "BOARD_36LJU22")
+    # set(BOARD "BOARD_36LJU22")
     # set(BOARD "BOARD_38LJE24")
-    # set(BOARD "BOARD_38LJU24")
+    set(BOARD "BOARD_38LJU24")
     # set(BOARD "BOARD_RP2040_ZERO")
     # set(BOARD "BOARD_11XGA24_1")
     # set(BOARD "BOARD_11XGA24_2")
@@ -37,7 +37,7 @@ endif()
 
 # Set to ON for Raspberry Pi Pico 2 (RP2350), OFF for original Pico (RP2040)
 if(NOT DEFINED USE_PICO2)
-    set(USE_PICO2 OFF)
+    set(USE_PICO2 ON)
 endif()
 
 # =============================================================================
