@@ -49,8 +49,6 @@ static const uint I2C_SLAVE_SCL_PIN = I2C_PIN_SCL;
 #define FF_OSD_BUTTON_RIGHT 2
 #define FF_OSD_BUTTON_SELECT 4
 
-#define FF_OSD_BUTTON_PULSE_FRAMES 30
-
 #define FF_OSD_KBD_TIMEOUT_US 10000000 // 10 seconds — same as OSD menu timeout
 
 extern settings_t settings;
@@ -69,12 +67,7 @@ ff_osd_display_t ff_osd_display = {
 uint8_t ff_osd_buttons_rx;      // button state: Gotek -> OSD
 bool ff_osd_kbd_active = false; // F12 toggle: keyboard controls Gotek
 
-// SELECT forwarding state in FlashFloppy mode:
-// - short tap: forwarded on release as a brief pulse
-// - long hold: reserved for opening local OSD menu, not forwarded to Gotek
-static bool ff_btn_prev_held = false;
-static uint8_t ff_btn_pulse_frames = 0;
-static bool ff_osd_display_was_on = false; // Track display on→off transition
+static bool ff_osd_display_was_on = false; // Track display on→off transition (for kbd deactivation)
 
 // state: OSD -> Gotek
 ff_osd_info_t ff_osd_info = {
@@ -120,7 +113,7 @@ uint8_t ff_osd_set_h_position(int8_t h_position)
     return h_position;
 }
 
-void ff_osd_set_buttons(uint8_t buttons)
+void __not_in_flash_func(ff_osd_set_buttons)(uint8_t buttons)
 {
     ff_osd_info.buttons = buttons;
 }
@@ -435,7 +428,7 @@ void ff_osd_i2c_process(void)
     return settings.ff_osd_config.i2c_protocol ? ffosd_process() : lcd_process();
 }
 
-void ff_osd_update()
+void __not_in_flash_func(ff_osd_update)()
 {
     if (!osd_state.enabled)
         return;
@@ -460,79 +453,50 @@ void ff_osd_update()
     uint8_t buttons = 0;
 
 #ifdef KBD_ENABLE
-    // Check cross-core Gotek toggle request (from keyboard F12)
-    // F12 toggles keyboard control of Gotek without sending any button codes.
-    if (ff_osd_request)
+    if (settings.ff_osd_config.i2c_protocol)
     {
-        ff_osd_request = false;
-        ff_osd_kbd_active = !ff_osd_kbd_active;
+        // Check cross-core Gotek toggle request (from keyboard F10)
+        // F10 toggles keyboard control of Gotek without sending any button codes.
+        if (ff_osd_request)
+        {
+            ff_osd_request = false;
+            ff_osd_kbd_active = !ff_osd_kbd_active;
 
-        if (ff_osd_kbd_active)
-            osd_update_activity(); // Reset timeout on activation
-    }
+            if (ff_osd_kbd_active)
+                osd_update_activity(); // Reset timeout on activation
+        }
 
-    // Deactivate keyboard control on host display on→off transition
-    if (ff_osd_kbd_active && ff_osd_display_was_on && !ff_osd_display.on)
-        ff_osd_kbd_active = false;
-
-    // Timeout: deactivate keyboard control after inactivity
-    if (ff_osd_kbd_active)
-    {
-        uint64_t current_time = time_us_64();
-
-        if ((current_time - osd_state.last_activity_time) > FF_OSD_KBD_TIMEOUT_US)
+        // Deactivate keyboard control on host display on→off transition
+        if (ff_osd_kbd_active && ff_osd_display_was_on && !ff_osd_display.on)
             ff_osd_kbd_active = false;
-    }
 
-    ff_osd_display_was_on = ff_osd_display.on;
+        // Timeout: deactivate keyboard control after inactivity
+        if (ff_osd_kbd_active)
+        {
+            uint64_t current_time = time_us_64();
+
+            if ((current_time - osd_state.last_activity_time) > FF_OSD_KBD_TIMEOUT_US)
+                ff_osd_kbd_active = false;
+        }
+
+        ff_osd_display_was_on = ff_osd_display.on;
+    }
+    else
+    {
+        ff_osd_kbd_active = false; // LCD mode: keyboard control not supported
+    }
 #endif
 
     bool block_ff_buttons = osd_buttons_blocked();
 
-    if (block_ff_buttons)
+    if (!block_ff_buttons && settings.ff_osd_config.i2c_protocol)
     {
-        ff_btn_prev_held = false;
-        ff_btn_pulse_frames = 0;
-    }
-    else if (settings.ff_osd_config.i2c_protocol)
-    {
-        // Release-triggered pulse: SELECT is forwarded on button release as a
-        // brief pulse, but ONLY for short taps (< OSD_HOLD_US).  Long holds that
-        // open the local OSD menu are suppressed — the Gotek never sees SELECT
-        // during the hold that triggered the menu.  The pulse duration (30 frames
-        // ≈ 500 ms) is long enough for FlashFloppy to catch on its next I2C poll.
-        // This mechanism is reliable because osd_buttons_update() is called only
-        // once per frame when OSD_MENU_ENABLE is active (#ifndef guard above).
-        bool sel_held = osd_button_held(2);
-
-        if (!sel_held && ff_btn_prev_held)
-        {
-            uint64_t hold_us = time_us_64() - osd_buttons.key_hold_start[2];
-
-            if (hold_us < OSD_HOLD_US)
-                ff_btn_pulse_frames = FF_OSD_BUTTON_PULSE_FRAMES;
-        }
-
-        ff_btn_prev_held = sel_held;
-
-        if (ff_btn_pulse_frames > 0)
-        {
+        // Forward SEL directly while FF OSD display is on: level-based, no pulse.
+        // The display.on gate prevents SELECT from reaching Gotek when the
+        // display is off (idle / user is long-pressing to open settings menu).
+        if (ff_osd_display.on && osd_button_pressed(2))
             buttons |= FF_OSD_BUTTON_SELECT;
-            ff_btn_pulse_frames--;
-        }
-    }
-    else
-    {
-        // LCD mode: preserve previous immediate-press behavior.
-        ff_btn_prev_held = false;
-        ff_btn_pulse_frames = 0;
 
-        if (osd_button_pressed(2)) // SEL -> SELECT
-            buttons |= FF_OSD_BUTTON_SELECT;
-    }
-
-    if (!block_ff_buttons)
-    {
         if (osd_button_pressed(0)) // UP -> RIGHT
             buttons |= FF_OSD_BUTTON_RIGHT;
 
@@ -542,7 +506,7 @@ void ff_osd_update()
 
 #ifdef KBD_ENABLE
     // Merge keyboard held state directly for Gotek (bypasses double osd_buttons_update)
-    if (ff_osd_kbd_active)
+    if (settings.ff_osd_config.i2c_protocol && ff_osd_kbd_active)
     {
         uint8_t held = osd_virtual_held;
 
@@ -564,7 +528,7 @@ void ff_osd_update()
 
     if (ff_osd_display.on || ff_osd_kbd_active)
     {
-        osd_font = osd_font_style_2;
+        osd_font = osd_font_ram_2;
 
         const uint8_t fg_color = ff_osd_kbd_active ? 0x3 : 7; // Cyan when keyboard controls Gotek
         const uint8_t bg_color = 0;
@@ -626,11 +590,7 @@ void ff_osd_update()
         osd_state.text_updated = true;
         osd_state.needs_redraw = true;
 
-        // Throttle rendering: Gotek updates display content infrequently (≤ a few
-        // times/sec), but ff_osd_update runs at the full frame rate.  Calling
-        // osd_render_text_to_buffer every frame floods the SRAM bus with ~5K
-        // pixel writes.  Limiting to every 4th frame (~18 fps effective)
-        // is imperceptible on a Gotek display while restoring margin.
+        // Throttle rendering: Gotek updates display content infrequently.
         static uint8_t render_skip = 0;
 
         if (++render_skip >= 4)

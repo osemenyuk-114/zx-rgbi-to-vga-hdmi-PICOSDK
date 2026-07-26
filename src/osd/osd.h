@@ -65,6 +65,8 @@ extern osd_state_t osd_state;
 extern osd_mode_t osd_mode;
 extern osd_buttons_t osd_buttons;
 extern const uint8_t (*osd_font)[8];
+extern uint8_t osd_font_ram_1[256][8]; // SRAM copy of font style 1
+extern uint8_t osd_font_ram_2[256][8]; // SRAM copy of font style 2
 extern uint8_t osd_buffer[OSD_BUFFER_SIZE];
 extern char osd_text_buffer[OSD_TEXT_BUFFER_SIZE];    // Text buffer for content
 extern uint8_t osd_text_colors[OSD_TEXT_BUFFER_SIZE]; // High nibble: fg_color, Low nibble: bg_color

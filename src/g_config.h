@@ -82,10 +82,6 @@
 #define KBD_PIN_CLK 3
 #define KBD_PIN_STB 4
 
-#if defined(PICO_RP2350)
-#define DVI_USE_HSTX
-#endif
-
 #elif defined(BOARD_11XGA24_1) || defined(BOARD_11XGA24_2)
 
 #define HW_VERSION "11XGA24"

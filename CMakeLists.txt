@@ -24,8 +24,8 @@ set(EXECUTABLE_NAME "ZX_RGBI_TO_VGA_HDMI")
 #
 if(NOT DEFINED BOARD)
     # set(BOARD "BOARD_36LJU22")
-    # set(BOARD "BOARD_38LJE24")
-    set(BOARD "BOARD_38LJU24")
+    set(BOARD "BOARD_38LJE24")
+    # set(BOARD "BOARD_38LJU24")
     # set(BOARD "BOARD_RP2040_ZERO")
     # set(BOARD "BOARD_11XGA24_1")
     # set(BOARD "BOARD_11XGA24_2")
@@ -47,6 +47,10 @@ endif()
 # Force USE_PICO2 OFF for RP2040-based boards (no RP2350 variant)
 if(BOARD STREQUAL "BOARD_RP2040_ZERO" OR BOARD STREQUAL "BOARD_LEO_V2" OR BOARD STREQUAL "BOARD_LEO_V3" OR BOARD STREQUAL "BOARD_LEO_V3_2040BT")
     set(USE_PICO2 OFF)
+endif()
+
+if((BOARD STREQUAL "BOARD_38LJE24" OR BOARD STREQUAL "BOARD_38LJU24") AND USE_PICO2)
+    set(DVI_USE_HSTX ON)
 endif()
 
 # Enable hardware configuration code for LEO v3 boards
@@ -148,12 +152,22 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/settings.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/led.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/video/dvi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/video/rgb_capture.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video/v_buf.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video/vga.c 
     ${CMAKE_CURRENT_LIST_DIR}/src/video/video_output.c
 )
+
+# Conditionally add DVI source files based on the selected output method
+if(DVI_USE_HSTX)
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/video/dvi_hstx.c
+    )
+else()
+    target_sources(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/src/video/dvi_pio.c
+    )
+endif()
 
 # Conditionally add serial menu (requires USB stdio)
 if(SERIAL_MENU_ENABLE)
@@ -275,6 +289,10 @@ target_compile_options(${EXECUTABLE_NAME} PRIVATE
 
 # Add compile definitions for board variant and Pico version
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE ${BOARD})
+
+if(DVI_USE_HSTX)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE DVI_USE_HSTX)
+endif()
 
 # Add compile definitions for OSD features
 if(OSD_MENU_ENABLE)

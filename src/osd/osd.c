@@ -24,6 +24,8 @@
 #define REPEAT_DELAY_US 400000 // 400ms initial repeat delay
 #define REPEAT_RATE_US 80000   // 80ms repeat rate
 
+extern settings_t settings;
+
 extern video_mode_t video_mode;
 extern int16_t h_visible_area;
 extern int16_t v_margin;
@@ -59,6 +61,11 @@ osd_buttons_t osd_buttons = {0};
 static bool osd_buttons_block_until_release = false;
 
 const uint8_t (*osd_font)[8] = osd_font_style_1;
+
+// RAM copies of font data so osd_draw_char (in SRAM) never reads from XIP flash.
+// Allocated as non-const; filled by osd_init() via memcpy from the flash originals.
+uint8_t osd_font_ram_1[256][8];
+uint8_t osd_font_ram_2[256][8];
 
 static void osd_clear_buffer()
 { // Fill with background color (2 pixels per byte)
@@ -97,7 +104,11 @@ void osd_init()
 { // Initialize OSD state
     memset(&osd_state, 0, sizeof(osd_state));
 
-    osd_font = osd_font_style_1;
+    // Copy font tables from flash to SRAM so all osd_draw_char calls read from RAM.
+    memcpy(osd_font_ram_1, osd_font_style_1, sizeof(osd_font_ram_1));
+    memcpy(osd_font_ram_2, osd_font_style_2, sizeof(osd_font_ram_2));
+
+    osd_font = osd_font_ram_1;
     osd_state.enabled = true;
     osd_state.needs_redraw = true;
     osd_state.text_updated = true;
@@ -115,7 +126,7 @@ void osd_init()
 #endif
 }
 
-void osd_set_position()
+void __not_in_flash_func(osd_set_position)()
 {
     // Limit OSD dimensions to fit within the available display area
     // Horizontal: width/2 must not exceed h_visible_area
@@ -226,7 +237,7 @@ void osd_hide()
     osd_state.visible = false;
 }
 
-void osd_update_activity()
+void __not_in_flash_func(osd_update_activity)()
 {
     osd_state.last_activity_time = time_us_64();
 }
@@ -263,7 +274,7 @@ void osd_text_set_char(uint8_t row, uint8_t col, uint8_t c, uint8_t fg_color, ui
     osd_text_colors[pos] = (fg_color << 4) | bg_color;
 }
 
-void osd_text_print(uint8_t row, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height)
+void __not_in_flash_func(osd_text_print)(uint8_t row, uint8_t col, const char *str, uint8_t fg_color, uint8_t bg_color, uint8_t height)
 {
     if (row >= osd_mode.rows)
         return;
@@ -339,7 +350,7 @@ void osd_text_printf(uint8_t row, uint8_t col, uint8_t fg_color, uint8_t bg_colo
     osd_text_print(row, col, temp, fg_color, bg_color, height);
 }
 
-void osd_render_text_to_buffer()
+void __not_in_flash_func(osd_render_text_to_buffer)()
 {                          // Render text buffer to pixel buffer
     uint16_t y_offset = 0; // Accumulated Y offset for double-height rows
 
@@ -366,7 +377,7 @@ void osd_render_text_to_buffer()
     }
 }
 
-void osd_draw_char(uint8_t *buffer, uint16_t buf_width, uint16_t x, uint16_t y,
+void __not_in_flash_func(osd_draw_char)(uint8_t *buffer, uint16_t buf_width, uint16_t x, uint16_t y,
                    uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t height)
 {
     const uint8_t *char_data = osd_font[c];
@@ -463,7 +474,7 @@ void osd_buttons_init()
     osd_state.show_time = current_time;
 }
 
-void osd_buttons_update()
+void __not_in_flash_func(osd_buttons_update)()
 {
     if (!osd_state.enabled)
         return;
@@ -505,12 +516,15 @@ void osd_buttons_update()
             { // Key is held - check for repeat
                 uint64_t hold_duration = current_time - osd_buttons.key_hold_start[i];
                 // Check for SEL button long press (>5 seconds)
-                if (i == 2 && hold_duration > 5000000 && !osd_buttons.sel_long_press_triggered)
+                if (i == 2 && hold_duration > 5000000 && !osd_buttons.sel_long_press_triggered
+#ifdef OSD_FF_ENABLE
+                    && !(settings.ff_osd_config.enabled && settings.ff_osd_config.i2c_protocol && ff_osd_display.on)
+#endif
+                )
                 { // Trigger video output type toggle
 #ifdef OSD_MENU_ENABLE
                     osd_buttons.sel_long_press_triggered = true;
                     // Toggle video output type
-                    extern settings_t settings;
                     extern video_out_type_t active_video_output;
                     extern void stop_video_output();
                     extern void start_video_output(video_out_type_t);
@@ -570,7 +584,7 @@ void osd_buttons_update()
 #endif
 }
 
-bool osd_button_pressed(uint8_t button)
+bool __not_in_flash_func(osd_button_pressed)(uint8_t button)
 {
     switch (button)
     {
@@ -588,7 +602,7 @@ bool osd_button_pressed(uint8_t button)
     }
 }
 
-bool osd_button_held(uint8_t button)
+bool __not_in_flash_func(osd_button_held)(uint8_t button)
 {
     if (button > 2)
         return false;
@@ -596,7 +610,7 @@ bool osd_button_held(uint8_t button)
     return osd_buttons.key_held[button];
 }
 
-uint64_t osd_button_hold_duration_us(uint8_t button, uint64_t current_time)
+uint64_t __not_in_flash_func(osd_button_hold_duration_us)(uint8_t button, uint64_t current_time)
 {
     if (button > 2 || !osd_buttons.key_held[button])
         return 0;
@@ -604,30 +618,30 @@ uint64_t osd_button_hold_duration_us(uint8_t button, uint64_t current_time)
     return current_time - osd_buttons.key_hold_start[button];
 }
 
-bool osd_any_button_held()
+bool __not_in_flash_func(osd_any_button_held)()
 {
     return osd_buttons.key_held[0] || osd_buttons.key_held[1] || osd_buttons.key_held[2];
 }
 
-void osd_clear_pressed_buttons()
+void __not_in_flash_func(osd_clear_pressed_buttons)()
 {
     osd_buttons.up_pressed = false;
     osd_buttons.down_pressed = false;
     osd_buttons.sel_pressed = false;
 }
 
-void osd_block_buttons_until_release()
+void __not_in_flash_func(osd_block_buttons_until_release)()
 {
     osd_buttons_block_until_release = true;
     osd_clear_pressed_buttons();
 }
 
-bool osd_buttons_blocked()
+bool __not_in_flash_func(osd_buttons_blocked)()
 {
     return osd_buttons_block_until_release;
 }
 
-bool osd_buttons_apply_release_block()
+bool __not_in_flash_func(osd_buttons_apply_release_block)()
 {
     if (!osd_buttons_block_until_release)
         return false;

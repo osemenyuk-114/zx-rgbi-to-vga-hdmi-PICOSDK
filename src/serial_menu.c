@@ -290,7 +290,7 @@ void print_video_out_mode()
         printf("800x600 @75Hz\n");
         break;
 #endif
-        case MODE_1024x768_60Hz_d3:
+    case MODE_1024x768_60Hz_d3:
         printf("1024x768 @60Hz (div 3)\n");
         break;
 
