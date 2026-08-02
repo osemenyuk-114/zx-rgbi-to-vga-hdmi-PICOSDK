@@ -641,11 +641,9 @@ void osd_menu_update()
     if (!osd_state.enabled)
         return;
 
-    // If menu is not active, only check for activation buttons
     if (!osd_state.menu_active)
     {
 #ifdef KBD_ENABLE
-        // Check cross-core menu open request (from keyboard)
         bool kbd_open = osd_menu_request;
 
         if (kbd_open)
@@ -711,7 +709,6 @@ void osd_menu_update()
     }
 
 #ifdef KBD_ENABLE
-    // F9 (OSD_HOTKEY_MENU) toggle: close menu if already active
     if (osd_menu_request)
     {
         osd_menu_request = false;
@@ -721,8 +718,6 @@ void osd_menu_update()
     }
 #endif
 
-    // Menu is active from here
-    // Update button states
     osd_buttons_update();
 
     if (osd_buttons_apply_release_block())
@@ -736,15 +731,12 @@ void osd_menu_update()
         return;
     }
 
-    // Check for menu timeout
-    {
-        uint64_t current_time = time_us_64();
+    uint64_t current_time = time_us_64();
 
-        if ((current_time - osd_state.last_activity_time) > OSD_MENU_TIMEOUT_US)
-        {
-            osd_menu_hide();
-            return;
-        }
+    if ((current_time - osd_state.last_activity_time) > OSD_MENU_TIMEOUT_US)
+    {
+        osd_menu_hide();
+        return;
     }
 
     if (osd_button_pressed(0))
@@ -787,7 +779,6 @@ void osd_menu_update()
         osd_buttons.sel_pressed = false;
     }
 #ifdef KBD_ENABLE
-    // Handle BACK (ESC key via virtual buttons)
     uint8_t virt = osd_virtual_buttons;
 
     if (virt & OSD_VIRT_BACK)
@@ -850,7 +841,6 @@ static inline void menu_item_colors(bool selected, bool tuning, uint8_t color, u
     }
 }
 
-// Menu rendering functions
 static void render_main_menu()
 {
     const char *items[] = {

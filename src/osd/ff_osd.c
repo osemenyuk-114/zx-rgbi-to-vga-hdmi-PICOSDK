@@ -12,13 +12,12 @@
 #include "osd_kbd.h"
 #endif
 
-#ifdef OSD_FF_ENABLE // Compile FF OSD code only if supported and enabled in config
+#ifdef OSD_FF_ENABLE
 
 // Cross-core flag: set from core0 menus when FF OSD is enabled after being
 // disabled at startup. Core1 loop picks this up and calls ff_osd_i2c_init().
 volatile bool ff_osd_needs_i2c_init = false;
 
-// Helper macros
 #define MASK(r, x) ((x) & (count_of(r) - 1))
 
 #define barrier() asm volatile("" ::: "memory")
@@ -26,7 +25,7 @@ volatile bool ff_osd_needs_i2c_init = false;
 static const uint I2C_SLAVE_SDA_PIN = I2C_PIN_SDA;
 static const uint I2C_SLAVE_SCL_PIN = I2C_PIN_SCL;
 
-// 100 kHz: I2C Standard Mode, matching flashfloppy setting
+// 100 kHz: I2C Standard Mode, matching FlashFloppy setting
 #define I2C_BAUDRATE 100000
 
 #define FF_OSD_FW_VER "1.9"
@@ -55,7 +54,6 @@ extern settings_t settings;
 
 const char ff_osd_fw_ver[] = FF_OSD_FW_VER;
 
-// Display state, exported to display routines
 ff_osd_display_t ff_osd_display = {
     .cols = 20,
     .rows = 4,
@@ -64,18 +62,16 @@ ff_osd_display_t ff_osd_display = {
     .text = {},
 };
 
-bool ff_osd_kbd_active = false; // F12 toggle: keyboard controls Gotek
+bool ff_osd_kbd_active = false; // F10 toggle: keyboard controls Gotek
 
 static bool ff_osd_display_was_on = false; // Track display on→off transition (for kbd deactivation)
 
-// state: OSD -> Gotek
 ff_osd_info_t ff_osd_info = {
     .protocol_ver = 0,
     .fw_major = ff_osd_fw_ver[0],
     .fw_minor = ff_osd_fw_ver[2],
     .buttons = 0};
 
-// I2C data ring
 static uint8_t d_ring[1024];
 static uint16_t d_cons, d_prod; // data ring buffer consumer / producer pointers
 
@@ -83,10 +79,8 @@ static uint16_t d_cons, d_prod; // data ring buffer consumer / producer pointers
 static uint16_t t_ring[8];
 static uint16_t t_cons, t_prod; // transactions ring buffer consumer / producer pointers
 
-// Current position in FF OSD I2C Protocol character data.
 static uint8_t ff_osd_x, ff_osd_y;
 
-// LCD state
 static uint8_t lcd_ddraddr;
 
 uint16_t ff_osd_set_cols(int16_t cols)

@@ -1,9 +1,7 @@
 #pragma once
 
-// OSD Menu-specific definitions
 #define OSD_MENU_TIMEOUT_US 10000000 // 10 seconds
 
-// Menu layout constants
 #define OSD_TITLE_ROW 1
 #define OSD_SUBTITLE_ROW 3
 #define OSD_MENU_START_ROW 5
@@ -17,7 +15,6 @@
 #define MENU_TYPE_FF_OSD 6
 #define MENU_TYPE_HARDWARE 7
 
-// Menu-specific OSD state extension
 typedef struct
 {
     uint8_t selected_item;       // Currently selected menu item
@@ -36,7 +33,6 @@ typedef struct
 extern osd_menu_nav_t osd_menu;
 extern osd_menu_state_t osd_menu_state;
 
-// Menu functions
 void osd_menu_init();
 void osd_menu_update();
 

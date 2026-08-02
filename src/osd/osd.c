@@ -68,7 +68,7 @@ uint8_t osd_font_ram_1[256][8];
 uint8_t osd_font_ram_2[256][8];
 
 static void osd_clear_buffer()
-{ // Fill with background color (2 pixels per byte)
+{
     uint8_t bg_color_pair = OSD_COLOR_BACKGROUND | (OSD_COLOR_BACKGROUND << 4);
     memset(osd_buffer, bg_color_pair, OSD_BUFFER_SIZE);
 }
@@ -78,21 +78,19 @@ static void osd_draw_border()
     if (!osd_mode.border_enabled)
         return;
 
-    // Top border
     osd_text_set_char(0, 0, OSD_CHAR_BORDER_TL, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
 
     for (uint8_t col = 1; col < osd_mode.columns - 1; col++)
         osd_text_set_char(0, col, OSD_CHAR_BORDER_HT, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
 
     osd_text_set_char(0, osd_mode.columns - 1, OSD_CHAR_BORDER_TR, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
-    // Bottom border
     osd_text_set_char(osd_mode.rows - 1, 0, OSD_CHAR_BORDER_BL, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
 
     for (uint8_t col = 1; col < osd_mode.columns - 1; col++)
         osd_text_set_char(osd_mode.rows - 1, col, OSD_CHAR_BORDER_HB, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
 
     osd_text_set_char(osd_mode.rows - 1, osd_mode.columns - 1, OSD_CHAR_BORDER_BR, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
-    // Left and right borders
+
     for (uint8_t row = 1; row < osd_mode.rows - 1; row++)
     {
         osd_text_set_char(row, 0, OSD_CHAR_BORDER_VL, OSD_COLOR_BORDER, OSD_COLOR_BACKGROUND);
@@ -101,7 +99,7 @@ static void osd_draw_border()
 }
 
 void osd_init()
-{ // Initialize OSD state
+{
     memset(&osd_state, 0, sizeof(osd_state));
 
     // Copy font tables from flash to SRAM so all osd_draw_char calls read from RAM.
@@ -112,16 +110,12 @@ void osd_init()
     osd_state.enabled = true;
     osd_state.needs_redraw = true;
     osd_state.text_updated = true;
-    // Initialize text buffer
     osd_clear_text_buffer();
-    // Clear overlay buffer
     osd_clear_buffer();
 
-    // Initialize buttons
     osd_buttons_init();
 
 #ifdef OSD_MENU_ENABLE
-    // Initialize menu-specific components
     osd_menu_init();
 #endif
 }
@@ -228,7 +222,6 @@ void osd_show()
     osd_state.needs_redraw = true;
     osd_state.show_time = current_time;
     osd_state.last_activity_time = current_time;
-    // Draw border once when OSD is activated
     osd_draw_border();
 }
 
@@ -243,7 +236,7 @@ void __not_in_flash_func(osd_update_activity)()
 }
 
 void osd_clear_text_buffer()
-{ // Clear text buffer but preserve border positions
+{
     uint8_t default_color = (OSD_COLOR_TEXT << 4) | OSD_COLOR_BACKGROUND;
 
     for (uint8_t row = 0; row < osd_mode.rows; row++)
@@ -251,9 +244,8 @@ void osd_clear_text_buffer()
         for (uint8_t col = 0; col < osd_mode.columns; col++)
         {
             uint16_t pos = row * osd_mode.columns + col;
-            // Skip border positions (first and last row, first and last column) only if borders are enabled
-            if (osd_mode.border_enabled &&
-                (row == 0 || row == osd_mode.rows - 1 || col == 0 || col == osd_mode.columns - 1))
+
+            if (osd_mode.border_enabled && (row == 0 || row == osd_mode.rows - 1 || col == 0 || col == osd_mode.columns - 1))
                 continue;
 
             osd_text_buffer[pos] = ' ';
@@ -278,7 +270,7 @@ void __not_in_flash_func(osd_text_print)(uint8_t row, uint8_t col, const char *s
 {
     if (row >= osd_mode.rows)
         return;
-    // Set height for this row
+
     osd_text_heights[row] = height;
 
     uint16_t row_start = row * osd_mode.columns;
@@ -286,7 +278,6 @@ void __not_in_flash_func(osd_text_print)(uint8_t row, uint8_t col, const char *s
     uint8_t max_len = osd_mode.columns - col;
     uint8_t packed_color = (fg_color << 4) | bg_color;
 
-    // Fill left padding with spaces (avoid column 0 only if borders are enabled)
     uint8_t start_col = osd_mode.border_enabled ? 1 : 0;
 
     for (uint8_t i = start_col; i < col; i++)
@@ -296,7 +287,6 @@ void __not_in_flash_func(osd_text_print)(uint8_t row, uint8_t col, const char *s
     }
 
     uint8_t i;
-    // Copy string characters (avoid last column only if borders are enabled)
     uint8_t effective_max_len;
 
     if (osd_mode.border_enabled)
@@ -309,7 +299,7 @@ void __not_in_flash_func(osd_text_print)(uint8_t row, uint8_t col, const char *s
         osd_text_buffer[pos + i] = str[i];
         osd_text_colors[pos + i] = packed_color;
     }
-    // Pad with spaces to fill the rest of the row
+
     for (; i < effective_max_len; i++)
     {
         osd_text_buffer[pos + i] = ' ';
@@ -323,7 +313,6 @@ void osd_text_print_centered(uint8_t row, const char *str, uint8_t fg_color, uin
         return;
 
     uint8_t len = strlen(str);
-    // Account for border columns only if borders are enabled
     uint8_t available_width = osd_mode.border_enabled ? (osd_mode.columns - 2) : osd_mode.columns;
 
     if (len > available_width)
@@ -332,7 +321,6 @@ void osd_text_print_centered(uint8_t row, const char *str, uint8_t fg_color, uin
     uint8_t start_col = osd_mode.border_enabled ? 1 : 0;
     uint8_t col = start_col + (available_width - len) / 2;
 
-    // osd_text_print() handles row padding and color fill for the whole line.
     osd_text_print(row, col, str, fg_color, bg_color, height);
 }
 
@@ -351,8 +339,8 @@ void osd_text_printf(uint8_t row, uint8_t col, uint8_t fg_color, uint8_t bg_colo
 }
 
 void __not_in_flash_func(osd_render_text_to_buffer)()
-{                          // Render text buffer to pixel buffer
-    uint16_t y_offset = 0; // Accumulated Y offset for double-height rows
+{
+    uint16_t y_offset = 0;
 
     for (uint8_t row = 0; row < osd_mode.rows; row++)
     {
@@ -371,7 +359,7 @@ void __not_in_flash_func(osd_render_text_to_buffer)()
 
             osd_draw_char(osd_buffer, osd_mode.width, x, y, c, fg_color, bg_color, height);
         }
-        // Add extra vertical space for double-height rows
+
         if (height)
             y_offset += OSD_FONT_HEIGHT;
     }
@@ -394,25 +382,21 @@ void __not_in_flash_func(osd_draw_char)(uint8_t *buffer, uint16_t buf_width, uin
             for (int col = 0; col < OSD_FONT_WIDTH; col++)
             {
                 uint16_t px = x + col;
-                // Check bounds
+
                 if (px >= buf_width || py >= osd_mode.height)
                     continue;
-                // Calculate buffer position (2 pixels per byte)
+
                 int buffer_offset = py * (buf_width / 2) + (px / 2);
 
                 if (buffer_offset >= osd_mode.buffer_size)
                     continue;
-                // Determine pixel color
+
                 uint8_t pixel_color = (line & (0x80 >> col)) ? fg_color : bg_color;
-                // Set pixel in buffer (2 pixels per byte)
+
                 if (px & 1)
-                { // Odd pixel (upper 4 bits)
                     buffer[buffer_offset] = (buffer[buffer_offset] & 0x0F) | (pixel_color << 4);
-                }
                 else
-                { // Even pixel (lower 4 bits)
                     buffer[buffer_offset] = (buffer[buffer_offset] & 0xF0) | (pixel_color & 0x0F);
-                }
             }
         }
     }
@@ -421,7 +405,6 @@ void __not_in_flash_func(osd_draw_char)(uint8_t *buffer, uint16_t buf_width, uin
 void osd_update()
 {
 #ifdef OSD_MENU_ENABLE
-    // Menu OSD has higher priority
     osd_menu_update();
 
     if (osd_state.menu_active)
@@ -441,7 +424,6 @@ void osd_update()
 void osd_buttons_init()
 {
 #ifndef NO_OSD_BUTTONS
-    // Configure button pins as inputs with pull-up
     gpio_init(OSD_BTN_UP);
     gpio_set_dir(OSD_BTN_UP, GPIO_IN);
     gpio_pull_up(OSD_BTN_UP);
@@ -454,13 +436,11 @@ void osd_buttons_init()
     gpio_set_dir(OSD_BTN_SEL, GPIO_IN);
     gpio_pull_up(OSD_BTN_SEL);
 #else
-    // Set GPIO override for OSD buttons to HIGH (inactive state)
     gpio_set_inover(OSD_BTN_UP, GPIO_OVERRIDE_HIGH);
     gpio_set_inover(OSD_BTN_DOWN, GPIO_OVERRIDE_HIGH);
     gpio_set_inover(OSD_BTN_SEL, GPIO_OVERRIDE_HIGH);
 #endif
 
-    // Initialize timing
     uint64_t current_time = time_us_64();
 
     for (int i = 0; i < 3; i++)
@@ -469,7 +449,6 @@ void osd_buttons_init()
     osd_buttons.sel_long_press_triggered = false;
     osd_buttons_block_until_release = false;
 
-    // Initialize menu timeout tracking
     osd_state.last_activity_time = current_time;
     osd_state.show_time = current_time;
 }
@@ -481,8 +460,6 @@ void __not_in_flash_func(osd_buttons_update)()
 
     uint64_t current_time = time_us_64();
 
-    // Handle button input
-    // Read button states (buttons are active LOW with pull-up)
     bool button_states[3] = {
         !gpio_get(OSD_BTN_UP),
         !gpio_get(OSD_BTN_DOWN),
@@ -493,13 +470,12 @@ void __not_in_flash_func(osd_buttons_update)()
         &osd_buttons.down_pressed,
         &osd_buttons.sel_pressed};
 
-    // Update each button with repeat functionality
     for (int i = 0; i < 3; i++)
     {
         if (button_states[i])
-        { // Button is currently pressed
+        {
             if (!osd_buttons.key_held[i])
-            { // First press detection
+            {
                 if (current_time - osd_buttons.last_press_time[i] > DEBOUNCE_TIME_US)
                 {
                     *button_pressed[i] = true;
@@ -507,13 +483,13 @@ void __not_in_flash_func(osd_buttons_update)()
                     osd_buttons.key_hold_start[i] = current_time;
                     osd_buttons.last_repeat_time[i] = current_time;
                     osd_buttons.last_press_time[i] = current_time;
-                    // Reset long press trigger on new SEL press
+
                     if (i == 2)
                         osd_buttons.sel_long_press_triggered = false;
                 }
             }
             else
-            { // Key is held - check for repeat
+            {
                 uint64_t hold_duration = current_time - osd_buttons.key_hold_start[i];
                 // Check for SEL button long press (>5 seconds)
                 if (i == 2 && hold_duration > 5000000 && !osd_buttons.sel_long_press_triggered
@@ -521,10 +497,9 @@ void __not_in_flash_func(osd_buttons_update)()
                     && !(settings.ff_osd_config.enabled && settings.ff_osd_config.i2c_protocol && ff_osd_display.on)
 #endif
                 )
-                { // Trigger video output type toggle
+                {
 #ifdef OSD_MENU_ENABLE
                     osd_buttons.sel_long_press_triggered = true;
-                    // Toggle video output type
                     extern video_out_type_t active_video_output;
                     extern void stop_video_output();
                     extern void start_video_output(video_out_type_t);
@@ -534,32 +509,28 @@ void __not_in_flash_func(osd_buttons_update)()
                     settings.video_out_type = new_type;
                     settings.video_out_mode = VIDEO_OUT_MODE_DEF;
 
-                    // Switch video output if different from current
                     if (active_video_output != settings.video_out_type)
                     {
                         stop_video_output();
                         start_video_output(settings.video_out_type);
-                        // Adjust capture frequency for new system clock
                         set_capture_frequency(settings.frequency);
                     }
 
-                    // Force menu redraw to show new output type
                     if (osd_state.visible)
                         osd_state.needs_redraw = true;
-                    // Don't process normal SEL press after long press
+
                     osd_buttons.sel_pressed = false;
                     continue;
 #endif
                 }
 
                 uint64_t since_last_repeat = current_time - osd_buttons.last_repeat_time[i];
-                // Initial repeat delay, then accelerating repeat rate
                 uint64_t repeat_delay;
 
                 if (hold_duration < REPEAT_DELAY_US)
-                    repeat_delay = REPEAT_DELAY_US; // Initial delay
+                    repeat_delay = REPEAT_DELAY_US;
                 else
-                    repeat_delay = REPEAT_RATE_US; // Faster repeat
+                    repeat_delay = REPEAT_RATE_US;
 
                 if (since_last_repeat > repeat_delay)
                 {
@@ -569,11 +540,11 @@ void __not_in_flash_func(osd_buttons_update)()
             }
         }
         else
-        { // Button released
+        {
             *button_pressed[i] = false;
 
             if (osd_buttons.key_held[i])
-                osd_buttons.last_press_time[i] = current_time; // debounce from release edge
+                osd_buttons.last_press_time[i] = current_time;
 
             osd_buttons.key_held[i] = false;
         }
