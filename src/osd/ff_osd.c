@@ -64,7 +64,6 @@ ff_osd_display_t ff_osd_display = {
     .text = {},
 };
 
-uint8_t ff_osd_buttons_rx;      // button state: Gotek -> OSD
 bool ff_osd_kbd_active = false; // F12 toggle: keyboard controls Gotek
 
 static bool ff_osd_display_was_on = false; // Track display on→off transition (for kbd deactivation)
@@ -88,7 +87,6 @@ static uint16_t t_cons, t_prod; // transactions ring buffer consumer / producer 
 static uint8_t ff_osd_x, ff_osd_y;
 
 // LCD state
-static bool lcd_inc;
 static uint8_t lcd_ddraddr;
 
 uint16_t ff_osd_set_cols(int16_t cols)
@@ -162,7 +160,6 @@ static void __not_in_flash_func(lcd_process_cmd)(uint8_t cmd)
         break;
 
     case 5: // Entry Mode Set
-        lcd_inc = (cmd & 2) != 0;
         break;
 
     case 6: // Return Home
@@ -305,7 +302,6 @@ static void __not_in_flash_func(ffosd_process)(void)
                 switch (x & 0xf0)
                 {
                 case FF_OSD_BUTTONS:
-                    ff_osd_buttons_rx = x & 0x0f;
                     break;
 
                 case FF_OSD_ROWS:

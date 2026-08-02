@@ -43,6 +43,7 @@ When Gotek mode is active:
 - Arrow keys and Enter are routed to Gotek via I2C (not to ZX Spectrum).
 - Gotek OSD is displayed on-screen regardless of Gotek backlight state.
 - Press **F10** again to deactivate and release the keyboard.
+- Press **Esc** to exit Gotek keyboard mode quickly.
 
 ---
 

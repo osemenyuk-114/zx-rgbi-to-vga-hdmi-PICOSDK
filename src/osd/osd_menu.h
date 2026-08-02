@@ -39,7 +39,6 @@ extern osd_menu_state_t osd_menu_state;
 // Menu functions
 void osd_menu_init();
 void osd_menu_update();
-void osd_menu_toggle();
 
 void osd_update_text_buffer(); // Update text buffer based on current menu state
 

@@ -15,9 +15,9 @@ In native **FlashFloppy** mode, short taps are forwarded:
 
 - **UP** -> FlashFloppy **RIGHT**
 - **DOWN** -> FlashFloppy **LEFT**
-- **SEL** -> FlashFloppy **SELECT**
+- **SEL** -> FlashFloppy **SELECT** (only while host display is on)
 
-A long **SEL** hold is reserved for opening the local setup OSD menu.
+A long **SEL** hold is reserved for opening the local setup OSD menu when the host display is off.
 
 ## Hardware Connections
 
@@ -268,8 +268,10 @@ display-off-secs = 255
 
 - The FF OSD renderer is separate from the normal converter setup menu
 - If the converter setup menu is open, that menu takes over the screen until it closes
-- In FLASHFLOPPY protocol mode, opening the local converter menu uses a long **SEL** hold (about 1 second)
+- In FLASHFLOPPY protocol mode, opening the local converter menu with local buttons uses a long **SEL** hold (about 1 second) while host display is off
+- Keyboard **F9** can still open the converter setup menu immediately
 - In FLASHFLOPPY protocol mode, short UP/DOWN taps are forwarded to the host as RIGHT/LEFT navigation
+- In FLASHFLOPPY protocol mode, SEL is forwarded to the host only while host display is on
 - When the local menu is opened by a long hold, menu key handling is blocked until keys are released once to avoid carry-over scrolling/actions
 - On local menu close, forwarding to FF OSD is also blocked until buttons are released once, preventing delayed release from triggering host actions
 - When the host display is off, the FF OSD overlay is hidden
@@ -280,6 +282,7 @@ display-off-secs = 255
 - When FF OSD is **disabled**, I2C processing is suspended and no overlay is drawn; button state is cleared so the host does not receive stale inputs
 - When FF OSD is **enabled** after being disabled at startup, the I2C peripheral is initialized on the next Core 1 loop cycle
 - When the **protocol is changed** at runtime, the I2C peripheral is fully re-initialized with the new slave address and display configuration on the next Core 1 loop cycle
+- In keyboard Gotek mode, pressing **Esc** exits Gotek keyboard control
 
 ## Defaults
 

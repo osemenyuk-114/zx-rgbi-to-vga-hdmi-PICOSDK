@@ -66,11 +66,228 @@ osd_menu_state_t osd_menu_state = {
 
 osd_menu_nav_t osd_menu = {0};
 
+typedef enum
+{
+    MENU_EDIT_NONE = 0,
+    MENU_EDIT_OUTPUT_MODE,
+    MENU_EDIT_CAPTURE_FREQ,
+    MENU_EDIT_CAPTURE_DIVIDER,
+    MENU_EDIT_IMAGE_HPOS,
+    MENU_EDIT_IMAGE_VPOS,
+    MENU_EDIT_IMAGE_DELAY,
+    MENU_EDIT_FF_COLS,
+    MENU_EDIT_FF_HPOS,
+    MENU_EDIT_HW_ROM_BANK,
+    MENU_EDIT_HW_GOTEK_DRIVE,
+} menu_edit_target_t;
+
+typedef bool (*menu_select_handler_t)(uint8_t item, bool *menu_changed);
+typedef void (*menu_render_handler_t)(void);
+
+static menu_edit_target_t osd_menu_edit_target = MENU_EDIT_NONE;
+
+static bool select_main_menu_item(uint8_t item, bool *menu_changed);
+static bool select_output_menu_item(uint8_t item, bool *menu_changed);
+static bool select_capture_menu_item(uint8_t item, bool *menu_changed);
+static bool select_image_adjust_menu_item(uint8_t item, bool *menu_changed);
+static bool select_mask_menu_item(uint8_t item, bool *menu_changed);
+static bool select_about_menu_item(uint8_t item, bool *menu_changed);
+#ifdef MAIN_ITEM_FF_OSD
+static bool select_ff_osd_menu_item(uint8_t item, bool *menu_changed);
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+static bool select_hardware_menu_item(uint8_t item, bool *menu_changed);
+#endif
+
+static void render_main_menu(void);
+static void render_output_menu(void);
+static void render_capture_menu(void);
+static void render_image_adjust_menu(void);
+static void render_mask_menu(void);
+static void render_about_menu(void);
+#ifdef MAIN_ITEM_FF_OSD
+static void render_ff_osd_menu(void);
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+static void render_hardware_menu(void);
+#endif
+
+static const uint8_t menu_max_item_by_type[MENU_TYPE_HARDWARE + 1] = {
+    [MENU_TYPE_MAIN] = MAIN_ITEM_COUNT - 1,
+    [MENU_TYPE_OUTPUT] = 3,
+    [MENU_TYPE_CAPTURE] = 5,
+    [MENU_TYPE_IMAGE_ADJUST] = 4,
+    [MENU_TYPE_MASK] = 7,
+    [MENU_TYPE_ABOUT] = 0,
+#ifdef MAIN_ITEM_FF_OSD
+    [MENU_TYPE_FF_OSD] = 6,
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+    [MENU_TYPE_HARDWARE] = 3,
+#endif
+};
+
+static const menu_select_handler_t menu_select_handler_by_type[MENU_TYPE_HARDWARE + 1] = {
+    [MENU_TYPE_MAIN] = select_main_menu_item,
+    [MENU_TYPE_OUTPUT] = select_output_menu_item,
+    [MENU_TYPE_CAPTURE] = select_capture_menu_item,
+    [MENU_TYPE_IMAGE_ADJUST] = select_image_adjust_menu_item,
+    [MENU_TYPE_MASK] = select_mask_menu_item,
+    [MENU_TYPE_ABOUT] = select_about_menu_item,
+#ifdef MAIN_ITEM_FF_OSD
+    [MENU_TYPE_FF_OSD] = select_ff_osd_menu_item,
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+    [MENU_TYPE_HARDWARE] = select_hardware_menu_item,
+#endif
+};
+
+static const menu_render_handler_t menu_render_handler_by_type[MENU_TYPE_HARDWARE + 1] = {
+    [MENU_TYPE_MAIN] = render_main_menu,
+    [MENU_TYPE_OUTPUT] = render_output_menu,
+    [MENU_TYPE_CAPTURE] = render_capture_menu,
+    [MENU_TYPE_IMAGE_ADJUST] = render_image_adjust_menu,
+    [MENU_TYPE_MASK] = render_mask_menu,
+    [MENU_TYPE_ABOUT] = render_about_menu,
+#ifdef MAIN_ITEM_FF_OSD
+    [MENU_TYPE_FF_OSD] = render_ff_osd_menu,
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+    [MENU_TYPE_HARDWARE] = render_hardware_menu,
+#endif
+};
+
+static void osd_menu_set_edit_target(menu_edit_target_t target)
+{
+    osd_menu_edit_target = target;
+    osd_menu_state.tuning_mode = (target != MENU_EDIT_NONE);
+}
+
+static uint8_t osd_menu_current_max_item(void)
+{
+    if (osd_menu.current_menu > MENU_TYPE_HARDWARE)
+        return 0;
+
+    return menu_max_item_by_type[osd_menu.current_menu];
+}
+
+static bool osd_menu_item_in_edit_mode(uint8_t item)
+{
+    switch (osd_menu_edit_target)
+    {
+    case MENU_EDIT_OUTPUT_MODE:
+        return osd_menu.current_menu == MENU_TYPE_OUTPUT && item == 0;
+
+    case MENU_EDIT_CAPTURE_FREQ:
+        return osd_menu.current_menu == MENU_TYPE_CAPTURE && item == 0;
+
+    case MENU_EDIT_CAPTURE_DIVIDER:
+        return osd_menu.current_menu == MENU_TYPE_CAPTURE && item == 2;
+
+    case MENU_EDIT_IMAGE_HPOS:
+        return osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST && item == 0;
+
+    case MENU_EDIT_IMAGE_VPOS:
+        return osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST && item == 1;
+
+    case MENU_EDIT_IMAGE_DELAY:
+        return osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST && item == 2;
+
+    case MENU_EDIT_FF_COLS:
+        return osd_menu.current_menu == MENU_TYPE_FF_OSD && item == 3;
+
+    case MENU_EDIT_FF_HPOS:
+        return osd_menu.current_menu == MENU_TYPE_FF_OSD && item == 4;
+
+    case MENU_EDIT_HW_ROM_BANK:
+        return osd_menu.current_menu == MENU_TYPE_HARDWARE && item == 0;
+
+    case MENU_EDIT_HW_GOTEK_DRIVE:
+        return osd_menu.current_menu == MENU_TYPE_HARDWARE && item == 2;
+
+    case MENU_EDIT_NONE:
+
+    default:
+        return false;
+    }
+}
+
+static bool osd_menu_apply_edit_delta(int8_t delta)
+{
+    switch (osd_menu_edit_target)
+    {
+    case MENU_EDIT_OUTPUT_MODE:
+        osd_adjust_video_mode(delta);
+        return true;
+
+    case MENU_EDIT_CAPTURE_FREQ:
+        osd_adjust_capture_parameter(0, delta);
+        return true;
+
+    case MENU_EDIT_CAPTURE_DIVIDER:
+        osd_adjust_capture_parameter(2, delta);
+        return true;
+
+    case MENU_EDIT_IMAGE_HPOS:
+        osd_adjust_image_parameter(0, delta);
+        return true;
+
+    case MENU_EDIT_IMAGE_VPOS:
+        osd_adjust_image_parameter(1, delta);
+        return true;
+
+    case MENU_EDIT_IMAGE_DELAY:
+        osd_adjust_image_parameter(2, delta);
+        return true;
+#ifdef MAIN_ITEM_FF_OSD
+    case MENU_EDIT_FF_COLS:
+        osd_adjust_ff_osd_parameter(3, delta);
+        return true;
+
+    case MENU_EDIT_FF_HPOS:
+        osd_adjust_ff_osd_parameter(4, delta);
+        return true;
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+    case MENU_EDIT_HW_ROM_BANK:
+        osd_adjust_hardware_parameter(0, delta);
+        return true;
+
+    case MENU_EDIT_HW_GOTEK_DRIVE:
+        osd_adjust_hardware_parameter(2, delta);
+        return true;
+#endif
+    case MENU_EDIT_NONE:
+    default:
+        return false;
+    }
+}
+
+static void osd_menu_handle_directional_input(int8_t step)
+{
+    uint8_t max_items = osd_menu_current_max_item();
+
+    if (osd_menu_apply_edit_delta(step))
+    {
+        osd_state.needs_redraw = true;
+        return;
+    }
+
+    int16_t next = (int16_t)osd_menu_state.selected_item - step;
+
+    if (next < 0 || next > max_items)
+        return;
+
+    osd_menu_state.selected_item = (uint8_t)next;
+    osd_state.needs_redraw = true;
+}
+
 static void osd_menu_hide(void)
 {
     // Hide menu and block button input until all buttons are released.
     osd_hide();
     osd_state.menu_active = false;
+    osd_menu_set_edit_target(MENU_EDIT_NONE);
     osd_block_buttons_until_release();
 #ifdef OSD_FF_ENABLE
     if (settings.ff_osd_config.enabled && settings.ff_osd_config.i2c_protocol)
@@ -88,7 +305,7 @@ static bool osd_menu_go_back(void)
     osd_menu.menu_depth--;
     osd_menu.current_menu = osd_menu.menu_stack[osd_menu.menu_depth];
     osd_menu_state.selected_item = osd_menu.item_stack[osd_menu.menu_depth];
-    osd_menu_state.tuning_mode = false;
+    osd_menu_set_edit_target(MENU_EDIT_NONE);
     osd_state.needs_redraw = true;
     return true;
 }
@@ -105,7 +322,7 @@ static bool osd_menu_enter_submenu(uint8_t menu_type)
     osd_menu.menu_depth++;
     osd_menu.current_menu = menu_type;
     osd_menu_state.selected_item = 0;
-    osd_menu_state.tuning_mode = false;
+    osd_menu_set_edit_target(MENU_EDIT_NONE);
     osd_state.needs_redraw = true;
     return true;
 }
@@ -131,7 +348,292 @@ void osd_menu_init()
 {
     memset(&osd_menu_state, 0, sizeof(osd_menu_state));
     memset(&osd_menu, 0, sizeof(osd_menu));
+    osd_menu_set_edit_target(MENU_EDIT_NONE);
     osd_menu.current_menu = MENU_TYPE_MAIN;
+}
+
+static void osd_menu_toggle_edit_target(menu_edit_target_t target)
+{
+    if (osd_menu_edit_target == target)
+        osd_menu_set_edit_target(MENU_EDIT_NONE);
+    else
+        osd_menu_set_edit_target(target);
+
+    osd_state.needs_redraw = true;
+}
+
+static bool select_main_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == MAIN_ITEM_OUTPUT)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_OUTPUT);
+    else if (item == MAIN_ITEM_CAPTURE)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_CAPTURE);
+    else if (item == MAIN_ITEM_IMAGE_ADJ)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_IMAGE_ADJUST);
+#ifdef MAIN_ITEM_FF_OSD
+    else if (item == MAIN_ITEM_FF_OSD)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_FF_OSD);
+#endif
+#ifdef MAIN_ITEM_HARDWARE
+    else if (item == MAIN_ITEM_HARDWARE)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_HARDWARE);
+#endif
+    else if (item == MAIN_ITEM_ABOUT)
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_ABOUT);
+    else if (item == MAIN_ITEM_SAVE)
+    {
+        stop_video_output();
+        save_settings(&settings);
+        osd_menu_hide();
+        *menu_changed = true;
+        start_video_output(active_video_output);
+    }
+    else if (item == MAIN_ITEM_EXIT)
+    {
+        osd_menu_hide();
+        *menu_changed = true;
+    }
+
+    return true;
+}
+
+static bool select_output_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 3)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    if (item == 0)
+    {
+        if (osd_menu_edit_target == MENU_EDIT_OUTPUT_MODE)
+        {
+            if (active_video_output == settings.video_out_type &&
+                osd_menu_state.original_video_mode != settings.video_out_mode)
+            {
+                stop_video_output();
+                start_video_output(active_video_output);
+                set_capture_frequency(settings.frequency);
+            }
+
+            osd_menu_set_edit_target(MENU_EDIT_NONE);
+            osd_state.needs_redraw = true;
+        }
+        else
+        {
+            osd_menu_state.original_video_mode = settings.video_out_mode;
+            osd_menu_set_edit_target(MENU_EDIT_OUTPUT_MODE);
+            osd_state.needs_redraw = true;
+        }
+
+        return true;
+    }
+
+    if (item == 1)
+    {
+        bool scanlines_supported = false;
+
+        if (settings.video_out_type == VGA)
+        {
+#ifdef SCANLINES_ENABLE_LOW_RES
+            scanlines_supported = true;
+#else
+            uint8_t div = video_modes[settings.video_out_mode]->div;
+            scanlines_supported = (div == 3 || div == 4);
+#endif
+        }
+
+        if (scanlines_supported)
+        {
+            settings.scanlines_mode = !settings.scanlines_mode;
+            set_scanlines_mode();
+            osd_state.needs_redraw = true;
+        }
+
+        return true;
+    }
+
+    if (item == 2)
+    {
+        settings.buffering_mode = !settings.buffering_mode;
+        extern void set_buffering_mode(bool);
+        set_buffering_mode(settings.buffering_mode);
+        osd_state.needs_redraw = true;
+        return true;
+    }
+
+    return false;
+}
+
+static bool select_capture_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 5)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    if (item == 1)
+    {
+        settings.cap_sync_mode = (settings.cap_sync_mode == SELF) ? EXT : SELF;
+        restart_capture = true;
+
+        if (settings.cap_sync_mode != EXT && osd_menu_edit_target == MENU_EDIT_CAPTURE_DIVIDER)
+            osd_menu_set_edit_target(MENU_EDIT_NONE);
+
+        osd_state.needs_redraw = true;
+        return true;
+    }
+
+    if (item == 2)
+    {
+        if (settings.cap_sync_mode == EXT)
+            osd_menu_toggle_edit_target(MENU_EDIT_CAPTURE_DIVIDER);
+
+        return true;
+    }
+
+    if (item == 3)
+    {
+        settings.video_sync_mode = !settings.video_sync_mode;
+        set_video_sync_mode(settings.video_sync_mode);
+        osd_state.needs_redraw = true;
+        return true;
+    }
+
+    if (item == 4)
+    {
+        *menu_changed = osd_menu_enter_submenu(MENU_TYPE_MASK);
+        return true;
+    }
+
+    if (item == 0)
+    {
+        osd_menu_toggle_edit_target(MENU_EDIT_CAPTURE_FREQ);
+        return true;
+    }
+
+    return false;
+}
+
+static bool select_image_adjust_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 4)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    if (item == 3)
+    {
+        set_capture_shX(shX_DEF);
+        set_capture_shY(shY_DEF);
+        set_capture_delay(DELAY_DEF);
+        osd_state.needs_redraw = true;
+        osd_menu_hide();
+        *menu_changed = true;
+        return true;
+    }
+
+    if (item == 0)
+        osd_menu_toggle_edit_target(MENU_EDIT_IMAGE_HPOS);
+    else if (item == 1)
+        osd_menu_toggle_edit_target(MENU_EDIT_IMAGE_VPOS);
+    else if (item == 2)
+        osd_menu_toggle_edit_target(MENU_EDIT_IMAGE_DELAY);
+
+    return true;
+}
+
+static bool select_mask_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 7)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    uint8_t bit_pos = mask_bit_positions[item];
+    uint8_t bit_mask = 1u << bit_pos;
+    settings.pin_inversion_mask ^= bit_mask;
+    set_pin_inversion_mask(settings.pin_inversion_mask);
+    osd_state.needs_redraw = true;
+    return true;
+}
+
+#ifdef MAIN_ITEM_FF_OSD
+static bool select_ff_osd_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 6)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    if (item == 0)
+        osd_adjust_ff_osd_parameter(0, 0);
+    else if (item == 1)
+        osd_adjust_ff_osd_parameter(1, 0);
+    else if (item == 2)
+    {
+        if (!settings.ff_osd_config.i2c_protocol)
+            osd_adjust_ff_osd_parameter(2, 0);
+        else
+            return true;
+    }
+    else if (item == 3)
+    {
+        if (!settings.ff_osd_config.i2c_protocol)
+            osd_menu_toggle_edit_target(MENU_EDIT_FF_COLS);
+
+        return true;
+    }
+    else if (item == 4)
+    {
+        osd_menu_toggle_edit_target(MENU_EDIT_FF_HPOS);
+        return true;
+    }
+    else if (item == 5)
+        osd_adjust_ff_osd_parameter(5, 0);
+
+    osd_state.needs_redraw = true;
+    return true;
+}
+#endif
+
+#ifdef MAIN_ITEM_HARDWARE
+static bool select_hardware_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 3)
+    {
+        *menu_changed = osd_menu_go_back();
+        return true;
+    }
+
+    if (item == 1)
+    {
+        settings.hw_config.ram_size = !settings.hw_config.ram_size;
+        hw_set_ram_size(settings.hw_config.ram_size);
+        osd_state.needs_redraw = true;
+        return true;
+    }
+
+    if (item == 0)
+        osd_menu_toggle_edit_target(MENU_EDIT_HW_ROM_BANK);
+    else if (item == 2)
+        osd_menu_toggle_edit_target(MENU_EDIT_HW_GOTEK_DRIVE);
+
+    return true;
+}
+#endif
+
+static bool select_about_menu_item(uint8_t item, bool *menu_changed)
+{
+    if (item == 0)
+        *menu_changed = osd_menu_go_back();
+
+    return true;
 }
 
 void osd_menu_update()
@@ -145,6 +647,7 @@ void osd_menu_update()
 #ifdef KBD_ENABLE
         // Check cross-core menu open request (from keyboard)
         bool kbd_open = osd_menu_request;
+
         if (kbd_open)
             osd_menu_request = false;
 #endif
@@ -244,459 +747,84 @@ void osd_menu_update()
         }
     }
 
-    // Get menu item count based on current menu
+    if (osd_button_pressed(0))
     {
-        uint8_t max_items;
-        if (osd_menu.current_menu == MENU_TYPE_MAIN)
-            max_items = MAIN_ITEM_COUNT - 1;
-        else if (osd_menu.current_menu == MENU_TYPE_OUTPUT)
-            max_items = 3; // Output menu: 0-3 (4 items: mode, scanlines, buffering, back)
-        else if (osd_menu.current_menu == MENU_TYPE_CAPTURE)
-            max_items = 5; // Capture menu: 0-5 (6 items: freq, mode, divider, sync, mask, back) - divider always shown but dimmed for SELF
-        else if (osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST)
-            max_items = 4; // Image adjust menu: 0-4 (5 items: H-POS, V-POS, DELAY, RESET, BACK)
-        else if (osd_menu.current_menu == MENU_TYPE_MASK)
-            max_items = 7; // Mask menu: 0-7 (8 items: F, SSI, KSI, I, B, G, R, BACK)
-        else if (osd_menu.current_menu == MENU_TYPE_ABOUT)
-            max_items = 0; // About menu: 0 (1 item: BACK)
-#ifdef MAIN_ITEM_FF_OSD
-        else if (osd_menu.current_menu == MENU_TYPE_FF_OSD)
-            max_items = 6; // FF OSD menu: 0-6 (7 items: ENABLE, PROTOCOL, ROWS, COLUMNS, H_POS, V_POS, BACK)
+        osd_update_activity();
+        osd_menu_handle_directional_input(1);
+        osd_buttons.up_pressed = false;
+    }
+
+    if (osd_button_pressed(1))
+    {
+        osd_update_activity();
+        osd_menu_handle_directional_input(-1);
+        osd_buttons.down_pressed = false;
+    }
+
+    if (osd_button_pressed(2))
+    {
+        osd_update_activity();
+        bool menu_changed = false;
+
+        if (osd_menu.current_menu <= MENU_TYPE_HARDWARE)
+        {
+            menu_select_handler_t handler = menu_select_handler_by_type[osd_menu.current_menu];
+
+            if (handler)
+                handler(osd_menu_state.selected_item, &menu_changed);
+        }
+
+        if (menu_changed)
+        {
+            osd_block_buttons_until_release();
+#ifdef KBD_ENABLE
+            // Discard any BACK/SEL events that arrived during the action
+            // so they don't fire unexpectedly after the block clears.
+            osd_virtual_buttons = 0;
 #endif
-#ifdef MAIN_ITEM_HARDWARE
-        else if (osd_menu.current_menu == MENU_TYPE_HARDWARE)
-            max_items = 3; // Hardware menu: 0-3 (4 items: ROM BANK, RAM SIZE, GOTEK DRIVE, BACK)
-#endif
+        }
+
+        osd_buttons.sel_pressed = false;
+    }
+#ifdef KBD_ENABLE
+    // Handle BACK (ESC key via virtual buttons)
+    uint8_t virt = osd_virtual_buttons;
+
+    if (virt & OSD_VIRT_BACK)
+    {
+        osd_virtual_buttons &= ~OSD_VIRT_BACK;
+        osd_update_activity();
+
+        if (osd_menu_edit_target != MENU_EDIT_NONE)
+        {
+            osd_menu_set_edit_target(MENU_EDIT_NONE);
+            osd_state.needs_redraw = true;
+        }
+        else if (osd_menu.menu_depth > 0)
+        {
+            osd_menu_go_back();
+            osd_block_buttons_until_release();
+        }
         else
-            max_items = 0;
-
-        // Handle navigation buttons
-        if (osd_button_pressed(0))
-        {                          // UP button
-            osd_update_activity(); // Reset timeout on user interaction
-            if (osd_menu.current_menu == MENU_TYPE_OUTPUT && osd_menu_state.tuning_mode && osd_menu_state.selected_item == 0)
-            { // Video mode adjustment
-                osd_adjust_video_mode(1);
-                osd_state.needs_redraw = true;
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST && osd_menu_state.tuning_mode && osd_menu_state.selected_item < 3)
-            { // Parameter adjustment mode - increase parameter value
-                osd_adjust_image_parameter(osd_menu_state.selected_item, 1);
-                osd_state.needs_redraw = true;
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_CAPTURE && osd_menu_state.tuning_mode && osd_menu_state.selected_item != 1 && osd_menu_state.selected_item != 3)
-            { // Capture parameter adjustment (exclude item 1 - MODE, item 3 - SYNC)
-                osd_adjust_capture_parameter(osd_menu_state.selected_item, 1);
-                osd_state.needs_redraw = true;
-            }
-#ifdef MAIN_ITEM_FF_OSD
-            else if (osd_menu.current_menu == MENU_TYPE_FF_OSD && osd_menu_state.tuning_mode && (osd_menu_state.selected_item == 3 || osd_menu_state.selected_item == 4))
-            { // FF OSD columns or H_POS cycling up
-                osd_adjust_ff_osd_parameter(osd_menu_state.selected_item, 1);
-                osd_state.needs_redraw = true;
-            }
-#endif
-#ifdef MAIN_ITEM_HARDWARE
-            else if (osd_menu.current_menu == MENU_TYPE_HARDWARE && osd_menu_state.tuning_mode)
-            {
-                osd_adjust_hardware_parameter(osd_menu_state.selected_item, 1);
-                osd_state.needs_redraw = true;
-            }
-#endif
-            else
-            { // Menu navigation mode - move selection up
-                if (osd_menu_state.selected_item > 0)
-                {
-                    osd_menu_state.selected_item--;
-                    osd_state.needs_redraw = true;
-                }
-            }
-
-            osd_buttons.up_pressed = false;
-        }
-        if (osd_button_pressed(1))
-        {                          // DOWN button
-            osd_update_activity(); // Reset timeout on user interaction
-            if (osd_menu.current_menu == MENU_TYPE_OUTPUT && osd_menu_state.tuning_mode && osd_menu_state.selected_item == 0)
-            { // Video mode adjustment
-                osd_adjust_video_mode(-1);
-                osd_state.needs_redraw = true;
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST && osd_menu_state.tuning_mode && osd_menu_state.selected_item < 3)
-            { // Parameter adjustment mode - decrease parameter value
-                osd_adjust_image_parameter(osd_menu_state.selected_item, -1);
-                osd_state.needs_redraw = true;
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_CAPTURE && osd_menu_state.tuning_mode && osd_menu_state.selected_item != 1 && osd_menu_state.selected_item != 3)
-            { // Capture parameter adjustment (exclude item 1 - MODE, item 3 - SYNC)
-                osd_adjust_capture_parameter(osd_menu_state.selected_item, -1);
-                osd_state.needs_redraw = true;
-            }
-#ifdef MAIN_ITEM_FF_OSD
-            else if (osd_menu.current_menu == MENU_TYPE_FF_OSD && osd_menu_state.tuning_mode && (osd_menu_state.selected_item == 3 || osd_menu_state.selected_item == 4))
-            { // FF OSD columns or H_POS cycling down
-                osd_adjust_ff_osd_parameter(osd_menu_state.selected_item, -1);
-                osd_state.needs_redraw = true;
-            }
-#endif
-#ifdef MAIN_ITEM_HARDWARE
-            else if (osd_menu.current_menu == MENU_TYPE_HARDWARE && osd_menu_state.tuning_mode)
-            {
-                osd_adjust_hardware_parameter(osd_menu_state.selected_item, -1);
-                osd_state.needs_redraw = true;
-            }
-#endif
-            else
-            { // Menu navigation mode - move selection down
-                if (osd_menu_state.selected_item < max_items)
-                {
-                    osd_menu_state.selected_item++;
-                    osd_state.needs_redraw = true;
-                }
-            }
-
-            osd_buttons.down_pressed = false;
-        }
-
-        // Handle selection in different menus
-        if (osd_button_pressed(2))
-        {                          // SEL button for item selection
-            osd_update_activity(); // Reset timeout on user interaction
-            bool menu_changed = false;
-
-            if (osd_menu.current_menu == MENU_TYPE_MAIN)
-            {
-                // Main menu selection
-                if (osd_menu_state.selected_item == MAIN_ITEM_OUTPUT)
-                { // Output Settings
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_OUTPUT);
-                }
-                else if (osd_menu_state.selected_item == MAIN_ITEM_CAPTURE)
-                { // Capture Settings
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_CAPTURE);
-                }
-                else if (osd_menu_state.selected_item == MAIN_ITEM_IMAGE_ADJ)
-                { // Image Adjust
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_IMAGE_ADJUST);
-                }
-#ifdef MAIN_ITEM_FF_OSD
-                else if (osd_menu_state.selected_item == MAIN_ITEM_FF_OSD)
-                { // FF OSD Config
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_FF_OSD);
-                }
-#endif
-#ifdef MAIN_ITEM_HARDWARE
-                else if (osd_menu_state.selected_item == MAIN_ITEM_HARDWARE)
-                { // Hardware Config
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_HARDWARE);
-                }
-#endif
-                else if (osd_menu_state.selected_item == MAIN_ITEM_ABOUT)
-                { // About
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_ABOUT);
-                }
-                else if (osd_menu_state.selected_item == MAIN_ITEM_SAVE)
-                { // Save
-                    stop_video_output();
-                    save_settings(&settings);
-                    osd_menu_hide();
-                    menu_changed = true;
-                    start_video_output(active_video_output);
-                }
-                else if (osd_menu_state.selected_item == MAIN_ITEM_EXIT)
-                { // Exit without saving
-                    osd_menu_hide();
-                    menu_changed = true;
-                }
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_OUTPUT)
-            {                                // Output submenu selection
-                uint8_t back_item_index = 3; // 4 items (mode, scanlines, buffering, back)
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-                else if (osd_menu_state.selected_item == 0)
-                { // Video mode selection - enter/exit tuning mode
-                    if (osd_menu_state.tuning_mode)
-                    { // Exit tuning mode and apply video mode change
-                        // Only restart if mode has changed
-                        if (active_video_output == settings.video_out_type &&
-                            osd_menu_state.original_video_mode != settings.video_out_mode)
-                        {
-                            stop_video_output();
-                            start_video_output(active_video_output);
-                            // Adjust capture frequency for new system clock
-                            set_capture_frequency(settings.frequency);
-                        }
-                        osd_menu_state.tuning_mode = false;
-                    }
-                    else
-                    { // Enter tuning mode - store original mode
-                        osd_menu_state.original_video_mode = settings.video_out_mode;
-                        osd_menu_state.tuning_mode = true;
-                    }
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 1)
-                { // Scanlines - toggle
-                    // Only allow toggle for VGA and when scanlines are supported
-                    bool scanlines_supported = false;
-
-                    if (settings.video_out_type == VGA)
-                    {
-#ifdef SCANLINES_ENABLE_LOW_RES
-                        // When SCANLINES_ENABLE_LOW_RES is defined, scanlines are supported for all div values
-                        scanlines_supported = true;
-#else
-                        // When SCANLINES_ENABLE_LOW_RES is not defined, only support div 3 and 4
-                        uint8_t div = video_modes[settings.video_out_mode]->div;
-                        scanlines_supported = (div == 3 || div == 4);
-#endif
-                    }
-
-                    if (scanlines_supported)
-                    {
-                        settings.scanlines_mode = !settings.scanlines_mode;
-                        set_scanlines_mode();
-                        osd_state.needs_redraw = true;
-                    }
-                }
-                else if (osd_menu_state.selected_item == 2)
-                { // Buffering - toggle between X1 and X3
-                    settings.buffering_mode = !settings.buffering_mode;
-                    extern void set_buffering_mode(bool);
-                    set_buffering_mode(settings.buffering_mode);
-                    osd_state.needs_redraw = true;
-                }
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_CAPTURE)
-            {                                // Capture submenu selection
-                uint8_t back_item_index = 5; // Always 6 items (freq, mode, divider, sync, mask, back)
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-                else if (osd_menu_state.selected_item == 1)
-                { // Capture mode - toggle between SELF and EXT
-                    settings.cap_sync_mode = (settings.cap_sync_mode == SELF) ? EXT : SELF;
-                    restart_capture = true;
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 2)
-                { // Divider
-                    // Only allow tuning mode if EXT mode
-                    if (settings.cap_sync_mode == EXT)
-                    {
-                        osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                        osd_state.needs_redraw = true;
-                    }
-                }
-                else if (osd_menu_state.selected_item == 3)
-                { // Sync - toggle between COMPOSITE and SEPARATE
-                    settings.video_sync_mode = !settings.video_sync_mode;
-                    set_video_sync_mode(settings.video_sync_mode);
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 4)
-                { // Mask - open mask submenu
-                    menu_changed = osd_menu_enter_submenu(MENU_TYPE_MASK);
-                }
-                else
-                { // Other adjustable parameters (0)
-                    // Toggle tuning mode for adjustable parameters
-                    osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                    osd_state.needs_redraw = true;
-                }
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_IMAGE_ADJUST)
-            {                                // Image adjust submenu selection
-                uint8_t back_item_index = 4; // 5 items: H-POS, V-POS, DELAY, RESET, BACK
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-                else if (osd_menu_state.selected_item == 3)
-                { // Reset to defaults
-                    set_capture_shX(shX_DEF);
-                    set_capture_shY(shY_DEF);
-                    set_capture_delay(DELAY_DEF);
-                    osd_state.needs_redraw = true;
-                    osd_menu_hide(); // Hide menu after resetting to defaults
-                    menu_changed = true;
-                }
-                else if (osd_menu_state.selected_item < 3)
-                { // Adjustable parameters (0-2)
-                    // Toggle tuning mode for adjustable parameters
-                    osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                    osd_state.needs_redraw = true;
-                }
-            }
-            else if (osd_menu.current_menu == MENU_TYPE_MASK)
-            {                                // Mask submenu selection
-                uint8_t back_item_index = 7; // 8 items: F, SSI, KSI, I, B, G, R, BACK
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Capture
-                    menu_changed = osd_menu_go_back();
-                }
-                else
-                { // Toggle the selected mask bit
-                    uint8_t bit_pos = mask_bit_positions[osd_menu_state.selected_item];
-                    uint8_t bit_mask = 1 << bit_pos;
-                    settings.pin_inversion_mask ^= bit_mask;
-                    set_pin_inversion_mask(settings.pin_inversion_mask);
-                    osd_state.needs_redraw = true;
-                }
-            }
-#ifdef MAIN_ITEM_FF_OSD
-            else if (osd_menu.current_menu == MENU_TYPE_FF_OSD)
-            {                                // FF OSD submenu selection
-                uint8_t back_item_index = 6; // 7 items: ENABLE, PROTOCOL, ROWS, COLUMNS, H_POS, V_POS, BACK
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-                else if (osd_menu_state.selected_item == 0)
-                { // Enable - toggle
-                    osd_adjust_ff_osd_parameter(0, 0);
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 1)
-                { // Protocol - toggle
-                    osd_adjust_ff_osd_parameter(1, 0);
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 2)
-                { // Rows - toggle 2/4 (only when LCD_HD44780)
-                    if (!settings.ff_osd_config.i2c_protocol)
-                    {
-                        osd_adjust_ff_osd_parameter(2, 0);
-                        osd_state.needs_redraw = true;
-                    }
-                }
-                else if (osd_menu_state.selected_item == 3)
-                { // Columns - enter/exit tuning mode (only when LCD_HD44780)
-                    if (!settings.ff_osd_config.i2c_protocol)
-                    {
-                        osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                        osd_state.needs_redraw = true;
-                    }
-                }
-                else if (osd_menu_state.selected_item == 4)
-                { // H_POS - enter/exit tuning mode
-                    osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                    osd_state.needs_redraw = true;
-                }
-                else if (osd_menu_state.selected_item == 5)
-                { // V_POS - toggle top/bottom
-                    osd_adjust_ff_osd_parameter(5, 0);
-                    osd_state.needs_redraw = true;
-                }
-            }
-#endif
-#ifdef MAIN_ITEM_HARDWARE
-            else if (osd_menu.current_menu == MENU_TYPE_HARDWARE)
-            {                                // Hardware submenu selection
-                uint8_t back_item_index = 3; // 4 items: ROM BANK, RAM SIZE, GOTEK DRIVE, BACK
-
-                if (osd_menu_state.selected_item == back_item_index)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-                else if (osd_menu_state.selected_item == 1)
-                { // RAM SIZE - toggle directly
-                    settings.hw_config.ram_size = !settings.hw_config.ram_size;
-                    hw_set_ram_size(settings.hw_config.ram_size);
-                    osd_state.needs_redraw = true;
-                }
-                else
-                { // ROM BANK / GOTEK DRIVE - enter/exit tuning mode
-                    osd_menu_state.tuning_mode = !osd_menu_state.tuning_mode;
-                    osd_state.needs_redraw = true;
-                }
-            }
-#endif
-            else if (osd_menu.current_menu == MENU_TYPE_ABOUT)
-            { // About submenu - only BACK button
-                if (osd_menu_state.selected_item == 0)
-                { // Back to Main
-                    menu_changed = osd_menu_go_back();
-                }
-            }
-            else
-            { // If we're in an unknown menu or want to close, toggle off
-                osd_menu_toggle();
-                menu_changed = true;
-            }
-
-            if (menu_changed)
-            {
-                osd_block_buttons_until_release();
-#ifdef KBD_ENABLE
-                // Discard any BACK/SEL events that arrived during the action
-                // so they don't fire unexpectedly after the block clears.
-                osd_virtual_buttons = 0;
-#endif
-            }
-
-            osd_buttons.sel_pressed = false;
-        }
-#ifdef KBD_ENABLE
-        // Handle BACK (ESC key via virtual buttons)
-        uint8_t virt = osd_virtual_buttons;
-
-        if (virt & OSD_VIRT_BACK)
-        {
-            osd_virtual_buttons &= ~OSD_VIRT_BACK;
-            osd_update_activity();
-
-            if (osd_menu_state.tuning_mode)
-            {
-                osd_menu_state.tuning_mode = false;
-                osd_state.needs_redraw = true;
-            }
-            else if (osd_menu.menu_depth > 0)
-            {
-                osd_menu_go_back();
-                osd_block_buttons_until_release();
-            }
-            else
-                osd_menu_hide();
-        }
-#endif
-
-#ifdef MAIN_ITEM_FF_OSD
-        // Re-render when Gotek reports a new column count asynchronously (Core 1 update)
-        if (osd_menu.current_menu == MENU_TYPE_FF_OSD && settings.ff_osd_config.i2c_protocol)
-        {
-            static uint8_t last_ff_cols = 0;
-
-            if (ff_osd_display.cols != last_ff_cols)
-            {
-                last_ff_cols = ff_osd_display.cols;
-                osd_state.needs_redraw = true;
-            }
-        }
-#endif
-
-        osd_flush_render();
+            osd_menu_hide();
     }
-}
+#endif
 
-void osd_menu_toggle()
-{
-    if (osd_state.menu_active)
-        osd_menu_hide();
-    else
+#ifdef MAIN_ITEM_FF_OSD
+    // Re-render when Gotek reports a new column count asynchronously (Core 1 update)
+    if (osd_menu.current_menu == MENU_TYPE_FF_OSD && settings.ff_osd_config.i2c_protocol)
     {
-        osd_show();
-        osd_state.menu_active = true;
+        static uint8_t last_ff_cols = 0;
+
+        if (ff_osd_display.cols != last_ff_cols)
+        {
+            last_ff_cols = ff_osd_display.cols;
+            osd_state.needs_redraw = true;
+        }
     }
+#endif
+
+    osd_flush_render();
 }
 
 // Compute fg/bg colors for a menu row.
@@ -795,7 +923,7 @@ static void render_output_menu()
             }
         }
 
-        menu_item_colors(i == osd_menu_state.selected_item, i == 0 && osd_menu_state.tuning_mode, color, &fg_color, &bg_color);
+        menu_item_colors(i == osd_menu_state.selected_item, osd_menu_item_in_edit_mode(i), color, &fg_color, &bg_color);
 
         if (i == 0)
         {
@@ -837,7 +965,7 @@ static void render_output_menu()
         else if (i == 3)
             osd_text_print(row, 2, "< BACK TO MAIN", fg_color, bg_color, 0);
 
-        if (i == 0 && i == osd_menu_state.selected_item && osd_menu_state.tuning_mode)
+        if (i == 0 && i == osd_menu_state.selected_item && osd_menu_item_in_edit_mode(i))
             osd_text_set_char(row, 1, '>', fg_color, bg_color);
     }
 }
@@ -855,7 +983,7 @@ static void render_capture_menu()
         if (i == 2 && settings.cap_sync_mode != EXT)
             color = OSD_COLOR_DIMMED;
 
-        menu_item_colors(i == osd_menu_state.selected_item, i < 5 && i != 1 && i != 3 && osd_menu_state.tuning_mode, color, &fg_color, &bg_color);
+        menu_item_colors(i == osd_menu_state.selected_item, osd_menu_item_in_edit_mode(i), color, &fg_color, &bg_color);
 
         if (i == 0)
             osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %lu", "FREQ", settings.frequency);
@@ -870,7 +998,7 @@ static void render_capture_menu()
         else if (i == 5)
             osd_text_print(row, 2, "< BACK TO MAIN", fg_color, bg_color, 0);
 
-        if (i < 5 && i != 1 && i != 3 && i == osd_menu_state.selected_item && osd_menu_state.tuning_mode)
+        if (i == osd_menu_state.selected_item && osd_menu_item_in_edit_mode(i))
             osd_text_set_char(row, 1, '>', fg_color, bg_color);
     }
 }
@@ -885,7 +1013,7 @@ static void render_image_adjust_menu()
         uint8_t color = OSD_COLOR_TEXT;
         uint8_t fg_color, bg_color;
 
-        menu_item_colors(i == osd_menu_state.selected_item, i < 3 && osd_menu_state.tuning_mode, color, &fg_color, &bg_color);
+        menu_item_colors(i == osd_menu_state.selected_item, osd_menu_item_in_edit_mode(i), color, &fg_color, &bg_color);
 
         if (i == 0)
             osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %d", "H_POS", shX_MAX - settings.shX);
@@ -898,7 +1026,7 @@ static void render_image_adjust_menu()
         else if (i == 4)
             osd_text_print(row, 2, "< BACK TO MAIN", fg_color, bg_color, 0);
 
-        if (i < 3 && i == osd_menu_state.selected_item && osd_menu_state.tuning_mode)
+        if (i == osd_menu_state.selected_item && osd_menu_item_in_edit_mode(i))
             osd_text_set_char(row, 1, '>', fg_color, bg_color);
     }
 }
@@ -957,9 +1085,7 @@ static void render_ff_osd_menu()
         if ((i == 2 || i == 3) && settings.ff_osd_config.i2c_protocol)
             color = OSD_COLOR_DIMMED;
 
-        menu_item_colors(i == osd_menu_state.selected_item,
-                         osd_menu_state.tuning_mode && ((i == 3 && !settings.ff_osd_config.i2c_protocol) || i == 4),
-                         color, &fg_color, &bg_color);
+        menu_item_colors(i == osd_menu_state.selected_item, osd_menu_item_in_edit_mode(i), color, &fg_color, &bg_color);
 
         if (i == 0)
             osd_text_printf(row, 2, fg_color, bg_color, 0, "%-9s %s", "ENABLE", settings.ff_osd_config.enabled ? "ON" : "OFF");
@@ -980,8 +1106,7 @@ static void render_ff_osd_menu()
         else if (i == 6)
             osd_text_print(row, 2, "< BACK TO MAIN", fg_color, bg_color, 0);
 
-        if ((i == 3 && !settings.ff_osd_config.i2c_protocol && i == osd_menu_state.selected_item && osd_menu_state.tuning_mode) ||
-            (i == 4 && i == osd_menu_state.selected_item && osd_menu_state.tuning_mode))
+        if (i == osd_menu_state.selected_item && osd_menu_item_in_edit_mode(i))
             osd_text_set_char(row, 1, '>', fg_color, bg_color);
     }
 }
@@ -1005,7 +1130,7 @@ static void render_hardware_menu()
         uint8_t fg_color, bg_color;
 
         // item 1 (RAM SIZE) is a direct toggle — never enters tuning mode
-        bool item_in_tuning = (i != 1) && osd_menu_state.tuning_mode;
+        bool item_in_tuning = osd_menu_item_in_edit_mode(i);
         menu_item_colors(i == osd_menu_state.selected_item, item_in_tuning, color, &fg_color, &bg_color);
 
         if (i == 0)
@@ -1057,44 +1182,12 @@ void osd_update_text_buffer()
     osd_text_print_centered(OSD_TITLE_ROW, title, OSD_COLOR_TEXT, OSD_COLOR_BACKGROUND, 0);
     osd_text_print_centered(OSD_SUBTITLE_ROW, "SETUP MENU", OSD_COLOR_SELECTED, OSD_COLOR_BACKGROUND, 0);
 
-    // Render menu based on current menu type
-    switch (osd_menu.current_menu)
+    if (osd_menu.current_menu <= MENU_TYPE_HARDWARE)
     {
-    case MENU_TYPE_MAIN:
-        render_main_menu();
-        break;
+        menu_render_handler_t render = menu_render_handler_by_type[osd_menu.current_menu];
 
-    case MENU_TYPE_OUTPUT:
-        render_output_menu();
-        break;
-
-    case MENU_TYPE_CAPTURE:
-        render_capture_menu();
-        break;
-
-    case MENU_TYPE_IMAGE_ADJUST:
-        render_image_adjust_menu();
-        break;
-
-    case MENU_TYPE_MASK:
-        render_mask_menu();
-        break;
-
-    case MENU_TYPE_ABOUT:
-        render_about_menu();
-        break;
-
-#ifdef MAIN_ITEM_FF_OSD
-    case MENU_TYPE_FF_OSD:
-        render_ff_osd_menu();
-        break;
-#endif
-
-#ifdef MAIN_ITEM_HARDWARE
-    case MENU_TYPE_HARDWARE:
-        render_hardware_menu();
-        break;
-#endif
+        if (render)
+            render();
     }
 }
 

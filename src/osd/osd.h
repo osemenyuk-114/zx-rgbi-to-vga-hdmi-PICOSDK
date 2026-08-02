@@ -93,7 +93,6 @@ void osd_text_set_char(uint8_t row, uint8_t col, uint8_t c, uint8_t fg_color, ui
 void osd_buttons_init();
 void osd_buttons_update();
 bool osd_button_pressed(uint8_t button);
-bool osd_button_held(uint8_t button);
 uint64_t osd_button_hold_duration_us(uint8_t button, uint64_t current_time);
 bool osd_any_button_held();
 void osd_clear_pressed_buttons();

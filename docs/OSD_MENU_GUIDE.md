@@ -34,7 +34,8 @@ For LEO V3 variants, use keyboard hotkeys for OSD navigation (F9, arrows, Enter,
 ### Opening the Menu
 
 - **Default behavior (boards with local buttons):** Press **UP**, **DOWN**, or **SEL** to open the OSD menu
-- **When FF OSD is enabled in FLASHFLOPPY protocol mode (boards with local buttons):** Hold **SEL** for about 1 second to open the menu
+- **When FF OSD is enabled in FLASHFLOPPY protocol mode (boards with local buttons):** Hold **SEL** for about 1 second to open the menu **only when the Gotek display is currently off**
+- If the Gotek display is on, local buttons stay mapped to Gotek controls; use keyboard **F9** for immediate menu access
 - When opened by a long hold, input is blocked until all buttons are released once
 
 ### Closing the Menu
@@ -48,6 +49,7 @@ For LEO V3 variants, use keyboard hotkeys for OSD navigation (F9, arrows, Enter,
   - Does not open menu
   - Automatically switches output and resets to default resolution
   - Short press of SEL has no action when menu is closed
+  - In FLASHFLOPPY protocol mode, this long-press toggle is ignored while Gotek display is on
 
 ## Menu Structure
 
@@ -88,7 +90,8 @@ BUFFERING    X1/X3           - Frame buffering mode
 **Available Modes:**
 
 - **DVI:** 640×480@60Hz, 720×576@50Hz
-- **VGA:** 640×480@60Hz, 800×600@60Hz, 1024×768@60Hz, 1280×1024@60Hz (DIV3/DIV4)
+- **DVI (HSTX builds):** additionally 800×600@72Hz and 800×600@75Hz
+- **VGA:** 640×480@60Hz, 800×600@60Hz, 1024×768@60Hz (DIV3 and DIV4), 1280×1024@60Hz (DIV3 and DIV4)
 
 ### CAPTURE SETTINGS
 

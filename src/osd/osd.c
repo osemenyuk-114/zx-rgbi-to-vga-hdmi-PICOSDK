@@ -378,7 +378,7 @@ void __not_in_flash_func(osd_render_text_to_buffer)()
 }
 
 void __not_in_flash_func(osd_draw_char)(uint8_t *buffer, uint16_t buf_width, uint16_t x, uint16_t y,
-                   uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t height)
+                                        uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t height)
 {
     const uint8_t *char_data = osd_font[c];
     uint8_t height_multiplier = height ? 2 : 1;
@@ -600,14 +600,6 @@ bool __not_in_flash_func(osd_button_pressed)(uint8_t button)
     default:
         return false;
     }
-}
-
-bool __not_in_flash_func(osd_button_held)(uint8_t button)
-{
-    if (button > 2)
-        return false;
-
-    return osd_buttons.key_held[button];
 }
 
 uint64_t __not_in_flash_func(osd_button_hold_duration_us)(uint8_t button, uint64_t current_time)

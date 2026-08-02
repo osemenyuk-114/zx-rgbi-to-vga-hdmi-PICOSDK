@@ -26,6 +26,7 @@ For detailed hardware and original software information, see the upstream projec
 - **Video Output:**
   - VGA output with selectable resolutions: 640×480 @60Hz, 800×600 @60Hz, 1024×768 @60Hz, 1280×1024 @60Hz.
   - HDMI (DVI) resolutions: 640×480 @60Hz and 720×576 @50Hz.
+  - HSTX DVI builds also support 800×600 @72Hz and 800×600 @75Hz.
   - Optional scanline effect on the VGA output at higher resolutions for a retro look.
   - "NO SIGNAL" message when no input is detected.
 - **Keyboard Input:**
@@ -42,6 +43,7 @@ For detailed hardware and original software information, see the upstream projec
   - Full-featured graphical menu system overlaid on video output.
   - Three-button control (UP, DOWN, SEL) with live tuning and save-to-flash support.
   - Quick VGA/DVI toggle via long SEL press (5 seconds).
+  - In native FlashFloppy protocol mode, local long-hold menu open works when host display is off; keyboard F9 always toggles setup menu.
   - Auto-timeout after 10 seconds of inactivity.
   - See [OSD Menu Guide](docs/OSD_MENU_GUIDE.md) for detailed usage instructions.
 - **FlashFloppy / Gotek OSD Support:**
@@ -84,7 +86,7 @@ For detailed hardware and original software information, see the upstream projec
 - **USB Keyboard**: TinyUSB Host boot keyboard driver with O(1) HID→universal key mapping.
 - **ZX Spectrum Emulation**: Universal→ZX 8×5 matrix mapping via CH446Q analog switch.
 - **OSD Control**: F9 toggles menu, arrows/Enter/Esc navigate. Controlled repeat (400ms delay, 80ms rate).
-- **Gotek Control**: F10 toggles keyboard→Gotek mode (arrows→LEFT/RIGHT, Enter→SELECT). Cyan text indicator.
+- **Gotek Control**: F10 toggles keyboard→Gotek mode (arrows→LEFT/RIGHT, Enter→SELECT). Esc also exits Gotek keyboard mode. Cyan text indicator.
 - **NMI / RESET**: F11/F12 are level-based. CH446Q mode: directly drives switches Y5:X10 (NMI) and Y6:X11 (RESET). EPM3256 mode: NMI/RESET bits sent in every SPI frame; EPM3256 emulates button presses. EPM3256 V0: not supported.
 - **USB Mouse**: Kempston-compatible X/Y accumulation and buttons (SPI builds). Default: right→D0, left→D1 (original schematic). F6 toggles mapping.
 - See [Keyboard Guide](docs/KEYBOARD_GUIDE.md) for full details.
