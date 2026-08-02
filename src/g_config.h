@@ -238,7 +238,6 @@ typedef enum video_out_mode_t
   MODE_640x480_60Hz = VIDEO_MODE_MIN,
   MODE_720x576_50Hz,
   MODE_800x600_72Hz,
-  MODE_800x600_75Hz,
   MODE_800x600_60Hz,
   MODE_1024x768_60Hz_d3,
   MODE_1024x768_60Hz_d4,
@@ -250,7 +249,7 @@ typedef enum video_out_mode_t
 #ifndef DVI_USE_HSTX
 #define VIDEO_MODE_DVI_MAX MODE_720x576_50Hz
 #else
-#define VIDEO_MODE_DVI_MAX MODE_800x600_75Hz
+#define VIDEO_MODE_DVI_MAX MODE_800x600_72Hz
 #endif
 
 typedef enum cap_sync_mode_t

@@ -90,7 +90,7 @@ BUFFERING    X1/X3           - Frame buffering mode
 **Available Modes:**
 
 - **DVI:** 640×480@60Hz, 720×576@50Hz
-- **DVI (HSTX builds):** additionally 800×600@72Hz and 800×600@75Hz
+- **DVI (HSTX builds):** additionally 800×600@72Hz
 - **VGA:** 640×480@60Hz, 800×600@60Hz, 1024×768@60Hz (DIV3 and DIV4), 1280×1024@60Hz (DIV3 and DIV4)
 
 ### CAPTURE SETTINGS

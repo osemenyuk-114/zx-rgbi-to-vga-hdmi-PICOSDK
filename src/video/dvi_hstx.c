@@ -196,10 +196,10 @@ void start_dvi()
   set_sys_clock_khz(video_mode.sys_freq, true);
   sleep_ms(10);
 
-  // hstx_div=2 for 640×480@60 and 720×576@50; hstx_div=1 for 800×600@72 and 800×600@75
+  // hstx_div=2 for 640×480@60 and 720×576@50; hstx_div=1 for 800×600@72
   // clock_configure_int_divider used for all cases — clock_configure_undivided
-  // behaves differently on RP2350 and causes instability at 800×600@75Hz
-  uint32_t hstx_div = video_mode.sys_freq == video_modes[MODE_800x600_72Hz]->sys_freq || video_mode.sys_freq == video_modes[MODE_800x600_75Hz]->sys_freq ? 1 : 2;
+  // behaves differently on RP2350 and causes instability at 800×600@72Hz
+  uint32_t hstx_div = video_mode.sys_freq == video_modes[MODE_800x600_72Hz]->sys_freq ? 1 : 2;
   clock_configure_int_divider(clk_hstx, 0, CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS, clock_get_hz(clk_sys), hstx_div);
 
   // === Color lookup table ===

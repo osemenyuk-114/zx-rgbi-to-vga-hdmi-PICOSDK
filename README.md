@@ -26,7 +26,7 @@ For detailed hardware and original software information, see the upstream projec
 - **Video Output:**
   - VGA output with selectable resolutions: 640×480 @60Hz, 800×600 @60Hz, 1024×768 @60Hz, 1280×1024 @60Hz.
   - HDMI (DVI) resolutions: 640×480 @60Hz and 720×576 @50Hz.
-  - HSTX DVI builds also support 800×600 @72Hz and 800×600 @75Hz.
+  - HSTX DVI builds also support 800×600 @72Hz.
   - Optional scanline effect on the VGA output at higher resolutions for a retro look.
   - "NO SIGNAL" message when no input is detected.
 - **Keyboard Input:**
@@ -34,7 +34,7 @@ For detailed hardware and original software information, see the upstream projec
   - USB keyboard support (TinyUSB Host, boot protocol).
   - Full ZX Spectrum keyboard emulation via CH446Q analog switch matrix.
   - OSD menu control via keyboard (F9, arrows, Enter, Esc).
-  - Gotek/FlashFloppy control via keyboard (F10 toggle, arrows, Enter).
+  - Gotek/FlashFloppy control via keyboard (F10 toggle, arrows, Enter, Esc to exit).
   - NMI signal via F11: CH446Q mode — closes switch Y5:X10; EPM3256 mode — sends NMI bit in SPI frame (EPM3256 emulates button press).
   - RESET signal via F12: CH446Q mode — closes switch Y6:X11; EPM3256 mode — sends RESET bit in SPI frame.
   - USB mouse support with Kempston-compatible output (SPI/EPM3256 builds); F6 toggles button mapping.

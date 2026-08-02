@@ -431,11 +431,9 @@ void __not_in_flash_func(ff_osd_update)()
     }
 
     // When OSD_MENU_ENABLE is active, osd_menu_update() already called
-    // osd_buttons_update() for this frame. Calling it again would process
-    // the GPIO state a second time: in the held path sel_pressed is not
-    // re-set, but in the release path it is cleared — so a button released
-    // between the two calls (or a bounce) silently kills sel_pressed before
-    // the pulse logic below ever sees it.
+    // osd_buttons_update() for this frame. Calling it again can clear
+    // sel_pressed on the release path between polls, causing missed SEL
+    // forwarding in this function.
 #ifndef OSD_MENU_ENABLE
     osd_buttons_update();
 #endif
