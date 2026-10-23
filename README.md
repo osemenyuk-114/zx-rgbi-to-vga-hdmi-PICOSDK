@@ -1,5 +1,7 @@
 # zx-rgbi-to-vga-hdmi-PICO-SDK
 
+> **⚠️ This repository has been archived.** Development has moved to the main [zx-rgbi-to-vga-hdmi](https://github.com/osemenyuk-114/zx-rgbi-to-vga-hdmi) repository, which now uses this native Pico SDK firmware as its `main` branch. Please use that repository for new issues, pull requests, and releases.
+
 A converter for ZX Spectrum RGBI video signals to modern VGA and HDMI displays.
 This repository contains code from [zx-rgbi-to-vga-hdmi](https://github.com/osemenyuk-114/zx-rgbi-to-vga-hdmi), modified to use the native Pico SDK and tools instead of the Arduino framework.
 
